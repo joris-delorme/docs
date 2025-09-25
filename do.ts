@@ -1,0 +1,5184 @@
+import fs from "fs";
+
+const pathsDefinition = {
+  "/post": {
+    get: {
+      tags: ["Post"],
+      summary: "Get post details",
+      operationId: "getPostByUrl",
+
+      parameters: [
+        {
+          name: "url",
+          description: "The **url** or **id** of the post.",
+          in: "query",
+          required: true,
+          schema: {
+            type: "string",
+            example:
+              "https://www.linkedin.com/posts/joris-delorme-b757a5229_jai-20-ans-aucun-casier-judiciaire-des-activity-7266754951920414721-rFwQ",
+          },
+        },
+      ],
+      responses: {
+        200: {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/Post",
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/tools/search-industries-id": {
+    get: {
+      tags: ["Tools"],
+      summary: "Search Industries IDs",
+      description: "Find LinkedIn industry IDs by keyword.",
+      operationId: "searchIndustriesId",
+      parameters: [
+        {
+          name: "keywords",
+          in: "query",
+          required: true,
+          description: "Search keywords to find industries",
+          schema: {
+            type: "string",
+            example: "Software",
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "integer", example: 935 },
+                    name: {
+                      type: "string",
+                      example:
+                        "Engines and Power Transmission Equipment Manufacturing",
+                    },
+                    hierarchy: {
+                      type: "string",
+                      example:
+                        "Manufacturing > Machinery Manufacturing > Engines and Power Transmission Equipment Manufacturing",
+                    },
+                    description: {
+                      type: "string",
+                      example:
+                        "This industry includes entities that manufacture turbines, power transmission equipment, and internal combustion engines (except automotive, gasoline and aircraft, which are in separate industries).",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/tools/search-locations-id": {
+    get: {
+      tags: ["Tools"],
+      summary: "Search Locations IDs",
+      description: "Find LinkedIn location IDs by keyword.",
+      operationId: "searchLocationsId",
+      parameters: [
+        {
+          name: "keywords",
+          in: "query",
+          required: true,
+          description: "Search keywords to find locations",
+          schema: {
+            type: "string",
+            example: "Paris",
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string", example: "9" },
+                    name: {
+                      type: "string",
+                      example: "Paris, Île-de-France, France",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/tools/search-current-titles-id": {
+    get: {
+      tags: ["Tools"],
+      summary: "Search Current Titles IDs",
+      description: "Find LinkedIn current job title IDs by keyword.",
+      operationId: "searchCurrentTitlesId",
+      parameters: [
+        {
+          name: "keywords",
+          in: "query",
+          required: true,
+          description: "Search keywords to find titles",
+          schema: {
+            type: "string",
+            example: "Chief Executive Officer",
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string", example: "9" },
+                    name: {
+                      type: "string",
+                      example: "Chief Executive Officer",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/private/sales-navigator-saved-search": {
+    get: {
+      tags: ["Private"],
+      summary: "Search Sales Navigator saved search profiles",
+      description:
+        "REQUIRES A SALES NAVIGATOR ACCOUNT.\n\nExecute a LinkedIn Sales Navigator saved search by ID to retrieve matching profiles.\n\n**Rate limit**: 100 requests per day per Sales Navigator account.",
+      operationId: "searchSalesNavigatorSavedSearchProfiles",
+      parameters: [
+        {
+          name: "account_id",
+          in: "query",
+          required: true,
+          description: "Account ID from the Accounts endpoint",
+          schema: {
+            type: "string",
+            format: "uuid",
+            example: "7088c9ee-0f24-4314-a299-e8b09cb09826",
+          },
+        },
+        {
+          name: "saved_search_id",
+          in: "query",
+          required: true,
+          description: "Sales Navigator saved search ID",
+          schema: {
+            type: "string",
+            example: "1234567890",
+          },
+        },
+        {
+          name: "page",
+          in: "query",
+          required: false,
+          description: "Page number for pagination",
+          schema: {
+            type: "integer",
+            minimum: 1,
+            maximum: 100,
+            default: 1,
+          },
+        },
+        {
+          name: "last_viewed_at",
+          in: "query",
+          required: false,
+          description:
+            "Unix timestamp in milliseconds to filter results viewed after this time",
+          schema: {
+            type: "integer",
+            format: "int64",
+            example: 1735689600000,
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  total: {
+                    type: "integer",
+                    description: "Total number of results",
+                    example: 10583438,
+                  },
+                  data: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        id: {
+                          type: "string",
+                          description:
+                            "LinkedIn unique identifier for the profile",
+                          example: "ACwAAAfwCpsBGL0CTA0muI-80THRYBnp-uczSQ4",
+                        },
+                        type: {
+                          type: "string",
+                          description: "Profile type, always 'person'",
+                          example: "person",
+                        },
+                        full_name: {
+                          type: "string",
+                          description: "User's full name",
+                          example: "Atul Mahableshwarkar",
+                        },
+                        url: {
+                          type: "string",
+                          description: "LinkedIn profile URL",
+                          example:
+                            "https://www.linkedin.com/in/ACwAAAfwCpsBGL0CTA0muI-80THRYBnp-uczSQ4",
+                        },
+                        headline: {
+                          type: "string",
+                          description: "User's headline",
+                          example: "",
+                        },
+                        profile_picture: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              height: {
+                                type: "integer",
+                                description: "Image height in pixels",
+                                example: 100,
+                              },
+                              width: {
+                                type: "integer",
+                                description: "Image width in pixels",
+                                example: 100,
+                              },
+                              url: {
+                                type: "string",
+                                description: "URL to profile picture",
+                                example:
+                                  "https://media.licdn.com/dms/image/v2/C5603AQEfNeKJ9uxxwA/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1587315925186?e=1751500800&v=beta&t=o5fofxx8NiaD2gZbCQrW6osDeb4UFM_EwVm74HPeN_4",
+                              },
+                              expires_at: {
+                                type: "integer",
+                                description: "Timestamp when URL expires",
+                                example: 1737590400000,
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/post/comments": {
+    get: {
+      tags: ["Post"],
+      summary: "Get post comments",
+      description:
+        "You can get a maximum of 100 comments per request/page; to retrieve more comments, use the **page** number.",
+      operationId: "getPostCommentsByUrl",
+      parameters: [
+        {
+          name: "url",
+          description: "The **url** or **id** of the post.",
+          in: "query",
+          required: true,
+          schema: {
+            type: "string",
+            example:
+              "https://www.linkedin.com/posts/joris-delorme-b757a5229_jai-20-ans-aucun-casier-judiciaire-des-activity-7266754951920414721-rFwQ",
+          },
+        },
+        {
+          name: "page",
+          in: "query",
+          description: "The page number for pagination.",
+          schema: {
+            type: "integer",
+            minimum: 1,
+            default: 1,
+          },
+        },
+        {
+          name: "sort_order",
+          in: "query",
+          schema: {
+            type: "string",
+            enum: ["REVERSE_CHRONOLOGICAL", "RELEVANCE"],
+            default: "RELEVANCE",
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  total: {
+                    type: "integer",
+                  },
+                  post: {
+                    type: "object",
+                    properties: {
+                      id: {
+                        type: "string",
+                        example: "7297238381225226240",
+                      },
+                      url: {
+                        type: "string",
+                        example:
+                          "https://www.linkedin.com/feed/update/urn:li:activity:7297238381225226240",
+                      },
+                    },
+                  },
+                  data: {
+                    type: "array",
+                    items: {
+                      $ref: "#/components/schemas/Comment",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/post/reactions": {
+    get: {
+      tags: ["Post"],
+      summary: "Get post reactions",
+      description:
+        "You can get a maximum of 100 reactions per request/page; to retrieve more reactions, use the **page** number.",
+      operationId: "getPostReactionsByUrl",
+      parameters: [
+        {
+          name: "url",
+          description: "The **url** or **id** of the post.",
+          in: "query",
+          required: true,
+          schema: {
+            type: "string",
+            example:
+              "https://www.linkedin.com/posts/joris-delorme-b757a5229_jai-20-ans-aucun-casier-judiciaire-des-activity-7266754951920414721-rFwQ",
+          },
+        },
+        {
+          name: "page",
+          in: "query",
+          description: "The page number for pagination.",
+          schema: {
+            type: "integer",
+            minimum: 1,
+            default: 1,
+          },
+        },
+        {
+          name: "type",
+          in: "query",
+          required: false,
+          schema: {
+            type: "string",
+            enum: ["LIKE", "PRAISE", "EMPATHY", "APPRECIATION", "INTEREST"],
+            example: "LIKE",
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  total: {
+                    type: "integer",
+                  },
+                  post: {
+                    type: "object",
+                    properties: {
+                      id: {
+                        type: "string",
+                        example: "7297238381225226240",
+                      },
+                      url: {
+                        type: "string",
+                        example:
+                          "https://www.linkedin.com/feed/update/urn:li:activity:7297238381225226240",
+                      },
+                    },
+                  },
+                  data: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        type: {
+                          type: "string",
+                          enum: [
+                            "LIKE",
+                            "PRAISE",
+                            "EMPATHY",
+                            "APPRECIATION",
+                            "INTEREST",
+                          ],
+                          example: "LIKE",
+                        },
+                        profile: {
+                          $ref: "#/components/schemas/MiniProfile",
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/post/reshares": {
+    get: {
+      tags: ["Post"],
+      summary: "Get post reshares",
+      description:
+        "You can get a maximum of 100 reshares per request/page; to retrieve more reshares, use the **page** number.",
+      operationId: "getPostResharesByUrl",
+      parameters: [
+        {
+          name: "url",
+          in: "query",
+          description: "The **url** or **id** of the post.",
+          required: true,
+          schema: {
+            type: "string",
+            example:
+              "https://www.linkedin.com/posts/joris-delorme-b757a5229_jai-20-ans-aucun-casier-judiciaire-des-activity-7266754951920414721-rFwQ",
+          },
+        },
+        {
+          name: "page",
+          in: "query",
+          description: "The page number for pagination.",
+          schema: {
+            type: "integer",
+            minimum: 1,
+            default: 1,
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  total: {
+                    type: "integer",
+                  },
+                  post: {
+                    type: "object",
+                    properties: {
+                      id: {
+                        type: "string",
+                        example: "7297238381225226240",
+                      },
+                      url: {
+                        type: "string",
+                        example:
+                          "https://www.linkedin.com/feed/update/urn:li:activity:7297238381225226240",
+                      },
+                    },
+                  },
+                  data: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        profile: {
+                          $ref: "#/components/schemas/MiniProfile",
+                        },
+                        post: {
+                          description:
+                            "- If the user has reshared the post without creating a new post, the post is null.\n- If the user has reshared the post with a new post, you got the post.",
+                          nullable: true,
+                          allOf: [{ $ref: "#/components/schemas/Post" }],
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/profile": {
+    get: {
+      tags: ["Profile"],
+      summary: "Get profile details",
+      operationId: "getProfile",
+      parameters: [
+        {
+          name: "url",
+          description: "The **url**, **public id** or **id** of the profile.",
+          in: "query",
+          required: true,
+          schema: {
+            type: "string",
+            description:
+              "The **url**, **public id** or **urn** of the profile.",
+            example: "https://www.linkedin.com/in/joris-delorme-b757a5229",
+          },
+        },
+      ],
+      responses: {
+        200: {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/Profile",
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/profile/posts": {
+    get: {
+      tags: ["Profile"],
+      summary: "Get profile posts",
+      operationId: "getProfilePosts",
+      description:
+        "You can get a maximum of 10 posts per request/page; to retrieve more posts, use the **page** and **pagination_token** parameters.",
+      parameters: [
+        {
+          name: "url",
+          description: "The **url**, **public id** or **id** of the profile.",
+          in: "query",
+          required: true,
+          schema: {
+            type: "string",
+            description:
+              "The **url**, **public id** or **urn** of the profile.",
+            example: "https://www.linkedin.com/in/joris-delorme-b757a5229",
+          },
+        },
+        {
+          name: "page",
+          description: "Page number for pagination",
+          in: "query",
+          required: false,
+          schema: {
+            type: "integer",
+            minimum: 1,
+            maximum: 100,
+            default: 1,
+          },
+        },
+        {
+          name: "pagination_token",
+          description:
+            "Use the **pagination_token** of the previous request to retrieve the next page of posts.",
+          in: "query",
+          required: false,
+          schema: {
+            type: "string",
+          },
+        },
+      ],
+      responses: {
+        200: {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  data: {
+                    type: "array",
+                    items: {
+                      $ref: "#/components/schemas/Post",
+                    },
+                  },
+                  pagination_token: {
+                    type: "string",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/profile/comments": {
+    get: {
+      tags: ["Profile"],
+      summary: "Get profile comments",
+      description: "Get the comments made by a profile on other posts.",
+      operationId: "getProfileComments",
+      parameters: [
+        {
+          name: "url",
+          description: "The **url**, **public id** or **id** of the profile.",
+          in: "query",
+          required: true,
+          schema: {
+            type: "string",
+            description:
+              "The **url**, **public id** or **urn** of the profile.",
+            example: "https://www.linkedin.com/in/joris-delorme-b757a5229",
+          },
+        },
+        {
+          name: "page",
+          description: "Page number for pagination",
+          in: "query",
+          required: false,
+          schema: {
+            type: "integer",
+            minimum: 1,
+            default: 1,
+          },
+        },
+        {
+          name: "pagination_token",
+          description:
+            "Use the **pagination_token** of the previous request to retrieve the next page of posts.",
+          in: "query",
+          required: false,
+          schema: {
+            type: "string",
+          },
+        },
+      ],
+      responses: {
+        200: {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  data: {
+                    type: "array",
+                    items: {
+                      $ref: "#/components/schemas/ProfileComment",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/profile/reactions": {
+    get: {
+      tags: ["Profile"],
+      summary: "Get profile reactions",
+      description: "Get the reactions made by a profile on other posts.",
+      operationId: "getProfileReactions",
+      parameters: [
+        {
+          name: "url",
+          description: "The **url**, **public id** or **id** of the profile.",
+          in: "query",
+          required: true,
+          schema: {
+            type: "string",
+            description:
+              "The **url**, **public id** or **urn** of the profile.",
+            example: "https://www.linkedin.com/in/joris-delorme-b757a5229",
+          },
+        },
+        {
+          name: "page",
+          description: "Page number for pagination",
+          in: "query",
+          required: false,
+          schema: {
+            type: "integer",
+            minimum: 1,
+            default: 1,
+          },
+        },
+        {
+          name: "pagination_token",
+          description:
+            "Use the **pagination_token** of the previous request to retrieve the next page of posts.",
+          in: "query",
+          required: false,
+          schema: {
+            type: "string",
+          },
+        },
+      ],
+      responses: {
+        200: {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  data: {
+                    type: "array",
+                    items: {
+                      $ref: "#/components/schemas/ProfileReaction",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/company": {
+    get: {
+      tags: ["Company"],
+      summary: "Get company details",
+      operationId: "getCompany",
+      parameters: [
+        {
+          name: "url",
+          in: "query",
+          required: true,
+          schema: {
+            type: "string",
+            description: "The **url**, **public id** or **id** of the company.",
+            example: "https://www.linkedin.com/company/airbnb",
+          },
+        },
+      ],
+      responses: {
+        200: {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/Company",
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/company/posts": {
+    get: {
+      tags: ["Company"],
+      summary: "Get company posts",
+      operationId: "getCompanyPosts",
+      description:
+        "You can get a maximum of 10 posts per request/page; to retrieve more posts, use the **page** and **pagination_token** parameters.",
+      parameters: [
+        {
+          name: "url",
+          in: "query",
+          required: true,
+          schema: {
+            type: "string",
+            description: "The **url**, **public id** or **id** of the company.",
+            example: "https://www.linkedin.com/company/airbnb",
+          },
+        },
+        {
+          name: "page",
+          description: "Page number for pagination",
+          in: "query",
+          required: false,
+          schema: {
+            type: "integer",
+            minimum: 1,
+            maximum: 100,
+            default: 1,
+          },
+        },
+        {
+          name: "pagination_token",
+          description:
+            "Use the **pagination_token** of the previous request to retrieve the next page of posts.",
+          in: "query",
+          required: false,
+          schema: {
+            type: "string",
+          },
+        },
+      ],
+      responses: {
+        200: {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  data: {
+                    type: "array",
+                    items: {
+                      $ref: "#/components/schemas/Post",
+                    },
+                  },
+                  pagination_token: {
+                    type: "string",
+                  },
+                },
+                example: {
+                  data: [
+                    {
+                      id: "7292589594699612160",
+                      url: "https://www.linkedin.com/feed/update/urn:li:activity:7292589594699612160",
+                      total_reactions: 264,
+                      total_reshares: 27,
+                      total_comments: 28,
+                      reaction_types: [
+                        {
+                          total: 222,
+                          type: "LIKE",
+                        },
+                        {
+                          total: 17,
+                          type: "EMPATHY",
+                        },
+                        {
+                          total: 17,
+                          type: "INTEREST",
+                        },
+                        {
+                          total: 6,
+                          type: "PRAISE",
+                        },
+                        {
+                          total: 1,
+                          type: "ENTERTAINMENT",
+                        },
+                        {
+                          total: 1,
+                          type: "APPRECIATION",
+                        },
+                      ],
+                      text: {
+                        content:
+                          "More than 75% of Gen Z travelers are using the Airbnb app to book quick winter escapes. See where they're going:",
+                        tags: [],
+                      },
+                      published_at: "2025-02-04T17:07:29.000Z",
+                      asset: {
+                        link: {
+                          name: "Top trends driving Gen Z travel this winter",
+                          url: "https://news.airbnb.com/top-trends-driving-gen-z-travel-this-winter/",
+                          thumbnail: [
+                            {
+                              height: 420,
+                              width: 800,
+                              url: "https://media.licdn.com/dms/image/sync/v2/D5627AQHp9auztl_2hA/articleshare-shrink_800/articleshare-shrink_800/0/1738006420158?e=1740168000&v=beta&t=lMmHmlgsvgg_8ojIO2La_0ygAtKR97QHe8-yniCq6V4",
+                              expires_at: 1737590400000,
+                            },
+                            {
+                              height: 672,
+                              width: 1280,
+                              url: "https://media.licdn.com/dms/image/sync/v2/D5627AQHp9auztl_2hA/articleshare-shrink_1280_800/articleshare-shrink_1280_800/0/1738006420158?e=1740168000&v=beta&t=Y01lMvvQH6AKP4pculzuqiAzoKlVcazNmghNvvM-aTw",
+                              expires_at: 1737590400000,
+                            },
+                          ],
+                        },
+                        images: null,
+                        video: null,
+                        document: null,
+                        reshare: null,
+                      },
+                      profile: {
+                        id: "309694",
+                        type: "company",
+                        full_name: "Airbnb",
+                        url: "https://www.linkedin.com/company/airbnb",
+                        headline: "2,835,110 followers",
+                        profile_picture: [],
+                      },
+                      is_reshare: false,
+                    },
+                  ],
+                  pagination_token:
+                    "1460087941-1739560772635-ba35cb550b787e8e6026ffd45220ae64",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/job": {
+    get: {
+      tags: ["Job"],
+      summary: "Get job details",
+      operationId: "getJobDetails",
+      parameters: [
+        {
+          name: "url",
+          description: "The **url** or **id** of the job.",
+          in: "query",
+          required: true,
+          schema: {
+            type: "string",
+            example: "https://www.linkedin.com/jobs/view/4153112402",
+          },
+        },
+      ],
+      responses: {
+        200: {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/Job",
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/search/companies": {
+    get: {
+      tags: ["Search"],
+      summary: "Search for companies",
+      description:
+        "Search for companies with various filters like size, location, industries, and job availability.",
+      operationId: "searchCompanies",
+      parameters: [
+        {
+          name: "keywords",
+          in: "query",
+          required: true,
+          description: "Search keywords to find companies",
+          schema: {
+            type: "string",
+            example: "Airbnb",
+          },
+        },
+        {
+          name: "company_size",
+          in: "query",
+          required: false,
+          description:
+            "Filter by company size. Multiple values can be provided with comma-separated strings.\n\n- B: 1-10 employees\n- C: 11-50 employees\n- D: 51-200 employees\n- E: 201-500 employees\n- F: 501-1000 employees\n- G: 1001-5000 employees\n- H: 5001-10,000 employees\n- I: 10,001+ employees",
+          schema: {
+            type: "string",
+            example: "H,I",
+          },
+        },
+        {
+          name: "locations",
+          in: "query",
+          required: false,
+          description:
+            "Filter by location IDs. Multiple values can be provided with comma-separated strings.\n\nFind location IDs using our [🔗 Location ID Finder](https://www.ghostgenius.fr/tools/search-sales-navigator-locations-id).",
+          schema: {
+            type: "string",
+            example: "105015875",
+          },
+        },
+        {
+          name: "industries",
+          in: "query",
+          required: false,
+          description:
+            "Filter by industry IDs. Multiple values can be provided with comma-separated strings.",
+          schema: {
+            type: "string",
+            example: "4,96",
+          },
+        },
+        {
+          name: "has_jobs",
+          in: "query",
+          required: false,
+          description: "Filter companies that have active job postings",
+          schema: {
+            type: "boolean",
+            default: false,
+          },
+        },
+        {
+          name: "page",
+          in: "query",
+          required: false,
+          description: "Page number for pagination",
+          schema: {
+            type: "integer",
+            minimum: 1,
+            maximum: 100,
+            default: 1,
+          },
+        },
+      ],
+      responses: {
+        200: {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  total: {
+                    type: "integer",
+                    description: "Total number of results",
+                    example: 1,
+                  },
+                  data: {
+                    type: "array",
+                    items: {
+                      $ref: "#/components/schemas/MiniProfile",
+                    },
+                    example: [
+                      {
+                        id: "309694",
+                        type: "company",
+                        full_name: "Airbnb",
+                        url: "https://www.linkedin.com/company/airbnb",
+                        headline:
+                          "Airbnb is a community based on connection and belonging.",
+                        profile_picture: [
+                          {
+                            height: 100,
+                            width: 100,
+                            url: "https://media.licdn.com/dms/image/v2/C560BAQFhfl32crIGIw/company-logo_100_100/company-logo_100_100/0/1630637496980/airbnb_logo?e=1747872000&v=beta&t=AUYYDD5raA8xsF9rn--j_W4SQQik0Xla2qUlDfJFFRo",
+                            expires_at: 1737590400000,
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/search/posts": {
+    get: {
+      tags: ["Search"],
+      summary: "Search for posts",
+      description:
+        "Search for posts with various filters like date, content type, authors, and mentions.",
+      operationId: "searchPosts",
+      parameters: [
+        {
+          name: "keywords",
+          in: "query",
+          required: true,
+          description: "Search keywords to find posts",
+          schema: {
+            type: "string",
+            example: "artificial intelligence",
+          },
+        },
+        {
+          name: "sort_by",
+          in: "query",
+          required: false,
+          description: 'Sort post by "relevance" or "date_posted" ',
+          schema: {
+            type: "string",
+            enum: ["date_posted", "relevance"],
+          },
+        },
+        {
+          name: "date_posted",
+          in: "query",
+          required: false,
+          description: "Filter posts by publication date",
+          schema: {
+            type: "string",
+            enum: ["past-24h", "past-week", "past-month"],
+          },
+        },
+        {
+          name: "content_type",
+          in: "query",
+          required: false,
+          description: "Filter posts by content type",
+          schema: {
+            type: "string",
+            enum: [
+              "videos",
+              "photos",
+              "liveVideos",
+              "collaborativeArticles",
+              "documents",
+            ],
+          },
+        },
+        {
+          name: "from_member",
+          in: "query",
+          required: false,
+          description:
+            "Filter posts by member authors. Multiple values can be provided with comma-separated strings.",
+          schema: {
+            type: "string",
+            example: "ACoAADk_dkkBUgoY3JZwOoVwWnmNT5Vul2dScAw",
+          },
+        },
+        {
+          name: "from_company",
+          in: "query",
+          required: false,
+          description:
+            "Filter posts by company authors. Multiple values can be provided with comma-separated strings.",
+          schema: {
+            type: "string",
+            example: "309694",
+          },
+        },
+        {
+          name: "mentions_member",
+          in: "query",
+          required: false,
+          description:
+            "Filter posts that mention specific members. Multiple values can be provided with comma-separated strings.",
+          schema: {
+            type: "string",
+            example: "ACoAADk_dkkBUgoY3JZwOoVwWnmNT5Vul2dScAw",
+          },
+        },
+        {
+          name: "mentions_organization",
+          in: "query",
+          required: false,
+          description:
+            "Filter posts that mention specific organizations. Multiple values can be provided with comma-separated strings.",
+          schema: {
+            type: "string",
+            example: "309694",
+          },
+        },
+        {
+          name: "author_industry",
+          in: "query",
+          required: false,
+          description:
+            "Filter posts by author's industry. Multiple values can be provided with comma-separated strings.",
+          schema: {
+            type: "string",
+            example: "4,96",
+          },
+        },
+        {
+          name: "author_company",
+          in: "query",
+          required: false,
+          description:
+            "Filter posts by author's company. Multiple values can be provided with comma-separated strings.",
+          schema: {
+            type: "string",
+            example: "309694",
+          },
+        },
+        {
+          name: "author_job_title",
+          in: "query",
+          required: false,
+          description:
+            "Filter posts by author's job title. Multiple values can be provided with comma-separated strings.",
+          schema: {
+            type: "string",
+            example: "Founder,CEO",
+          },
+        },
+        {
+          name: "page",
+          in: "query",
+          required: false,
+          description: "Page number for pagination",
+          schema: {
+            type: "integer",
+            minimum: 1,
+            maximum: 100,
+            default: 1,
+          },
+        },
+      ],
+      responses: {
+        200: {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  total: {
+                    type: "integer",
+                    description: "Total number of results",
+                    example: 1,
+                  },
+                  data: {
+                    type: "array",
+                    items: {
+                      $ref: "#/components/schemas/Post",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/search/jobs": {
+    get: {
+      tags: ["Search"],
+      summary: "Search for Jobs",
+      description: "Search for jobs on LinkedIn with filtering options.",
+      operationId: "searchJobs",
+      parameters: [
+        {
+          name: "keywords",
+          in: "query",
+          description: "Search keywords to find jobs",
+          required: true,
+          schema: {
+            type: "string",
+            example: "software engineer",
+          },
+        },
+        {
+          name: "location_id",
+          in: "query",
+          description:
+            "LinkedIn location ID to filter jobs by location.\n\nFind location IDs using our [🔗 Location ID Finder](https://www.ghostgenius.fr/tools/search-sales-navigator-locations-id).",
+          required: true,
+          schema: {
+            type: "string",
+            example: "90009674",
+          },
+        },
+        {
+          name: "page",
+          in: "query",
+          description: "The page number for pagination",
+          required: false,
+          schema: {
+            type: "integer",
+            minimum: 1,
+            maximum: 100,
+            default: 1,
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  total: {
+                    type: "integer",
+                    example: 852,
+                  },
+                  data: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        id: {
+                          type: "string",
+                          example: "4192228060",
+                        },
+                        title: {
+                          type: "string",
+                          example: "Software Engineer with Linux Kernel",
+                        },
+                        location: {
+                          type: "string",
+                          example: "European Union (Remote)",
+                        },
+                        company: {
+                          type: "object",
+                          properties: {
+                            full_name: {
+                              type: "string",
+                              example: "Oracle",
+                            },
+                            profile_picture: {
+                              type: "array",
+                              items: {
+                                type: "object",
+                                properties: {
+                                  height: {
+                                    type: "integer",
+                                    example: 200,
+                                  },
+                                  width: {
+                                    type: "integer",
+                                    example: 200,
+                                  },
+                                  url: {
+                                    type: "string",
+                                    example:
+                                      "https://media.licdn.com/dms/image/v2/D4E0BAQHYCgYovUuPtQ/company-logo_200_200/company-logo_200_200/0/1665755678957/oracle_logo?e=1749686400&v=beta&t=angRZFXjOYBtzmwJr7doy3yF-8slvhpeQeQuJcqmtk8",
+                                  },
+                                  expires_at: {
+                                    type: "integer",
+                                    example: 1737590400000,
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                        url: {
+                          type: "string",
+                          example:
+                            "https://www.linkedin.com/jobs/view/4192228060",
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/accounts": {
+    post: {
+      tags: ["Accounts"],
+      summary: "Create Account",
+      operationId: "createAccount",
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                name: {
+                  type: "string",
+                  description: "Account name",
+                },
+                li_at: {
+                  type: "string",
+                  description: "LinkedIn authentication token",
+                },
+                csrf: {
+                  type: "string",
+                  description: "CSRF token",
+                },
+                user_agent: {
+                  type: "string",
+                  description: "User agent for the account",
+                },
+              },
+              required: ["name", "li_at", "csrf", "user_agent"],
+            },
+          },
+        },
+      },
+      responses: {
+        201: {
+          description: "Account created successfully",
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/Account",
+              },
+            },
+          },
+        },
+        400: {
+          description: "Invalid request body",
+        },
+      },
+    },
+    get: {
+      tags: ["Accounts"],
+      summary: "List Accounts",
+      operationId: "listAccounts",
+      responses: {
+        200: {
+          description: "List of accounts",
+          content: {
+            "application/json": {
+              schema: {
+                type: "array",
+                items: {
+                  $ref: "#/components/schemas/Account",
+                },
+                example: [
+                  {
+                    id: "2f6c12f8-a25c-43ec-816b-1f5574698574",
+                    name: "Joris Delorm",
+                    created_at: "2025-04-04T13:07:30.071364+00:00",
+                    last_used: null,
+                    li_at: "xxxxx",
+                    csrf: "zzzzzzzz",
+                    user_agent:
+                      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+                  },
+                  {
+                    id: "3ced11ea-8ab6-45b9-979c-1d7e3262c826",
+                    name: "Bob Dupond",
+                    created_at: "2025-04-04T13:42:47.756825+00:00",
+                    last_used: null,
+                    li_at: "ksdnfnz",
+                    csrf: "smql",
+                    user_agent: "smqlfz",
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/accounts/{id}": {
+    get: {
+      tags: ["Accounts"],
+      summary: "Retrieve Account",
+      operationId: "getAccount",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          description: "Account unique identifier",
+          schema: {
+            type: "string",
+            format: "uuid",
+          },
+        },
+      ],
+      responses: {
+        200: {
+          description: "Account details retrieved successfully",
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/Account",
+              },
+            },
+          },
+        },
+        404: {
+          description: "Account not found",
+        },
+      },
+    },
+    patch: {
+      tags: ["Accounts"],
+      summary: "Update Account",
+      operationId: "updateAccount",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          description: "Account unique identifier",
+          schema: {
+            type: "string",
+            format: "uuid",
+          },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                name: {
+                  type: "string",
+                  description: "Account name",
+                },
+                li_at: {
+                  type: "string",
+                  description: "LinkedIn authentication token",
+                },
+                csrf: {
+                  type: "string",
+                  description: "CSRF token",
+                },
+                user_agent: {
+                  type: "string",
+                  description: "User agent for the account",
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: "Account updated successfully",
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/Account",
+              },
+            },
+          },
+        },
+        400: {
+          description: "Invalid request body",
+        },
+        404: {
+          description: "Account not found",
+        },
+      },
+    },
+    delete: {
+      tags: ["Accounts"],
+      summary: "Delete Account",
+      operationId: "deleteAccount",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          description: "Account unique identifier",
+          schema: {
+            type: "string",
+            format: "uuid",
+          },
+        },
+      ],
+      responses: {
+        204: {
+          description: "Account deleted successfully",
+        },
+        404: {
+          description: "Account not found",
+        },
+      },
+    },
+  },
+  "/private/profile-views": {
+    get: {
+      tags: ["Private"],
+      summary: "Get profile views",
+      description:
+        "Get a list of users who have viewed your LinkedIn profile\n\n**Rate limit**: 1 request per second, 50 requests per day per account.",
+      operationId: "getProfileViews",
+      parameters: [
+        {
+          name: "account_id",
+          in: "query",
+          required: true,
+          description: "Account ID from the Accounts endpoint",
+          schema: {
+            type: "string",
+            format: "uuid",
+            example: "7088c9ee-0f24-4314-a299-e8b09cb09826",
+          },
+        },
+        {
+          name: "page",
+          in: "query",
+          required: false,
+          description: "Page number for pagination",
+          schema: {
+            type: "integer",
+            minimum: 1,
+            default: 1,
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  data: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        last_viewed_time: {
+                          type: "string",
+                          description:
+                            "Relative time when this user viewed your profile",
+                          example: "38 minutes",
+                        },
+                        profile: {
+                          type: "object",
+                          properties: {
+                            id: {
+                              type: "string",
+                              description:
+                                "LinkedIn unique identifier for the user (may be null for anonymous views)",
+                              example:
+                                "ACoAADk_dkkBUgoY3JZwOoVwWnmNT5Vul2dScAw",
+                            },
+                            type: {
+                              type: "string",
+                              description: "Profile type, usually 'person'",
+                              example: "person",
+                            },
+                            full_name: {
+                              type: "string",
+                              description:
+                                "User's full name or anonymous descriptor",
+                              example: "Joris Delorme",
+                            },
+                            url: {
+                              type: "string",
+                              description:
+                                "LinkedIn profile URL (may be null for anonymous views)",
+                              example:
+                                "https://www.linkedin.com/in/ACoAADk_dkkBUgoY3JZwOoVwWnmNT5Vul2dScAw",
+                            },
+                            headline: {
+                              type: "string",
+                              description:
+                                "User's headline (may be null for anonymous views)",
+                              example:
+                                "Founder of Ghost Genius - Fâché avec la langue de Molière, alors j'écris du code.",
+                            },
+                            pictureUrl: {
+                              type: "array",
+                              items: {
+                                type: "object",
+                                properties: {
+                                  height: {
+                                    type: "integer",
+                                    description: "Image height in pixels",
+                                    example: 100,
+                                  },
+                                  width: {
+                                    type: "integer",
+                                    description: "Image width in pixels",
+                                    example: 100,
+                                  },
+                                  url: {
+                                    type: "string",
+                                    description: "URL to profile picture",
+                                    example:
+                                      "https://media.licdn.com/dms/image/v2/D4E03AQH0TT2Fp8YS2g/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1693474691125?e=1744848000&v=beta&t=y6T6e5erU2vCynuG3iPjuOkCtIiBgRpQiop7uyar-t4",
+                                  },
+                                  expires_at: {
+                                    type: "integer",
+                                    description: "Timestamp when URL expires",
+                                    example: 1737590400000,
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                  total: {
+                    type: "integer",
+                    description: "Total count of profile views",
+                    example: 7,
+                  },
+                },
+                example: {
+                  data: [
+                    {
+                      last_viewed_time: "38 minutes",
+                      profile: {
+                        id: "ACoAADk_dkkBUgoY3JZwOoVwWnmNT5Vul2dScAw",
+                        type: "person",
+                        full_name: "Joris Delorme",
+                        url: "https://www.linkedin.com/in/ACoAADk_dkkBUgoY3JZwOoVwWnmNT5Vul2dScAw",
+                        headline:
+                          "Founder of Ghost Genius - Fâché avec la langue de Molière, alors j'écris du code.",
+                        pictureUrl: [
+                          {
+                            height: 100,
+                            width: 100,
+                            url: "https://media.licdn.com/dms/image/v2/D4E03AQH0TT2Fp8YS2g/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1693474691125?e=1744848000&v=beta&t=y6T6e5erU2vCynuG3iPjuOkCtIiBgRpQiop7uyar-t4",
+                            expires_at: 1737590400000,
+                          },
+                          {
+                            height: 200,
+                            width: 200,
+                            url: "https://media.licdn.com/dms/image/v2/D4E03AQH0TT2Fp8YS2g/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1693474691125?e=1744848000&v=beta&t=29JMIZV40NT2UwypBDFLXlxxr5YR20VDg8Io74kxgiA",
+                            expires_at: 1737590400000,
+                          },
+                          {
+                            height: 400,
+                            width: 400,
+                            url: "https://media.licdn.com/dms/image/v2/D4E03AQH0TT2Fp8YS2g/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1693474691125?e=1744848000&v=beta&t=PnmBvKZW1mK1WDrhSWiueJoOCbYauMI1xPoDRFCtJME",
+                            expires_at: 1737590400000,
+                          },
+                          {
+                            height: 800,
+                            width: 800,
+                            url: "https://media.licdn.com/dms/image/v2/D4E03AQH0TT2Fp8YS2g/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1693474691125?e=1744848000&v=beta&t=D1Umz5CcloV8i4JtoX_BNXesFwikKXZxh-u52uN1WDY",
+                            expires_at: 1737590400000,
+                          },
+                        ],
+                      },
+                    },
+                    {
+                      last_viewed_time: "2 days",
+                      profile: {
+                        id: null,
+                        type: "person",
+                        full_name:
+                          "Founder in the Software Development industry from Greater Toulon Metropolitan Area",
+                        url: "https://www.linkedin.com/search/results/people/?keywords=Founder&origin=WHO_VIEWED_ME&industry=4",
+                        headline: null,
+                        pictureUrl: [],
+                      },
+                    },
+                    {
+                      last_viewed_time: null,
+                      profile: {
+                        id: null,
+                        type: "person",
+                        full_name: "3 LinkedIn members",
+                        url: null,
+                        headline: null,
+                        pictureUrl: [],
+                      },
+                    },
+                  ],
+                  total: 7,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/private/connections": {
+    get: {
+      tags: ["Private"],
+      summary: "Get connections",
+      description:
+        "Get a list of your LinkedIn connections\n\n **Rate limit**: 1 request per second, 50 requests per day per account.",
+      operationId: "getConnections",
+      parameters: [
+        {
+          name: "account_id",
+          in: "query",
+          required: true,
+          description: "Account ID from the Accounts endpoint",
+          schema: {
+            type: "string",
+            format: "uuid",
+            example: "7088c9ee-0f24-4314-a299-e8b09cb09826",
+          },
+        },
+        {
+          name: "page",
+          in: "query",
+          required: false,
+          description: "Page number for pagination",
+          schema: {
+            type: "integer",
+            minimum: 1,
+            default: 1,
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    connected_at: {
+                      type: "string",
+                      description: "ISO timestamp of when connection was made",
+                      example: "2025-03-26T22:34:23.000Z",
+                    },
+                    profile: {
+                      type: "object",
+                      properties: {
+                        id: {
+                          type: "string",
+                          description:
+                            "LinkedIn unique identifier for the connection",
+                          example: "ACoAACKDTNYBrzX4Q79DlsLSnTAdb0VCLEfw0tY",
+                        },
+                        type: {
+                          type: "string",
+                          description: "Profile type, usually 'person'",
+                          example: "person",
+                        },
+                        full_name: {
+                          type: "string",
+                          description: "Connection's full name",
+                          example: "Jean Sultan 💻",
+                        },
+                        url: {
+                          type: "string",
+                          description: "LinkedIn profile URL",
+                          example:
+                            "https://www.linkedin.com/in/jean-sultan-💻-b32aba141",
+                        },
+                        headline: {
+                          type: "string",
+                          description: "Connection's headline",
+                          example:
+                            "J'ai plus de conversations avec des algorithmes 🤖\nqu'avec mes amis.",
+                        },
+                        pictureUrl: {
+                          type: "array",
+                          deprecated: true,
+                          items: {
+                            type: "object",
+                            properties: {
+                              height: {
+                                type: "integer",
+                                description: "Image height in pixels",
+                                example: 100,
+                              },
+                              width: {
+                                type: "integer",
+                                description: "Image width in pixels",
+                                example: 100,
+                              },
+                              url: {
+                                type: "string",
+                                description: "URL to profile picture",
+                                example:
+                                  "https://media.licdn.com/dms/image/v2/D4E03AQECzvIKwI9M5Q/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1730738693334?e=1749081600&v=beta&t=ieIlrCCWkztf57oLsCa7cGJqTfxi04c-lc2zcNzn98o",
+                              },
+                              expires_at: {
+                                type: "integer",
+                                description: "Timestamp when URL expires",
+                                example: 1737590400000,
+                              },
+                            },
+                          },
+                        },
+                        profile_picture: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              height: {
+                                type: "integer",
+                                description: "Image height in pixels",
+                                example: 100,
+                              },
+                              width: {
+                                type: "integer",
+                                description: "Image width in pixels",
+                                example: 100,
+                              },
+                              url: {
+                                type: "string",
+                                description: "URL to profile picture",
+                                example:
+                                  "https://media.licdn.com/dms/image/v2/D4E03AQECzvIKwI9M5Q/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1730738693334?e=1749081600&v=beta&t=ieIlrCCWkztf57oLsCa7cGJqTfxi04c-lc2zcNzn98o",
+                              },
+                              expires_at: {
+                                type: "integer",
+                                description: "Timestamp when URL expires",
+                                example: 1737590400000,
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                example: [
+                  {
+                    connected_at: "2025-03-26T22:34:23.000Z",
+                    profile: {
+                      id: "ACoAACKDTNYBrzX4Q79DlsLSnTAdb0VCLEfw0tY",
+                      type: "person",
+                      full_name: "Jean Sultan 💻",
+                      url: "https://www.linkedin.com/in/jean-sultan-💻-b32aba141",
+                      headline:
+                        "J'ai plus de conversations avec des algorithmes 🤖\nqu'avec mes amis.",
+                      pictureUrl: [
+                        {
+                          height: 100,
+                          width: 100,
+                          url: "https://media.licdn.com/dms/image/v2/D4E03AQECzvIKwI9M5Q/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1730738693334?e=1749081600&v=beta&t=ieIlrCCWkztf57oLsCa7cGJqTfxi04c-lc2zcNzn98o",
+                          expires_at: 1737590400000,
+                        },
+                        {
+                          height: 200,
+                          width: 200,
+                          url: "https://media.licdn.com/dms/image/v2/D4E03AQECzvIKwI9M5Q/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1730738693334?e=1749081600&v=beta&t=CY08kJgJBrOsIEcNWCjTSj3VC89FitvswYVRVGZ0au0",
+                          expires_at: 1737590400000,
+                        },
+                        {
+                          height: 389,
+                          width: 389,
+                          url: "https://media.licdn.com/dms/image/v2/D4E03AQECzvIKwI9M5Q/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1730738693334?e=1749081600&v=beta&t=_JxqNFPwH11ci4VgLSnpXcITlxFewz0prZuyqwP8af4",
+                          expires_at: 1737590400000,
+                        },
+                        {
+                          height: 389,
+                          width: 389,
+                          url: "https://media.licdn.com/dms/image/v2/D4E03AQECzvIKwI9M5Q/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1730738693333?e=1749081600&v=beta&t=byNhDBIEVnHl4Nb9EeBGLCMzH2LPeIeNvKHqDN5gaCc",
+                          expires_at: 1737590400000,
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/private/followers": {
+    get: {
+      tags: ["Private"],
+      summary: "Get followers",
+      description:
+        "Get a list of your LinkedIn followers\n\n **Rate limit**: 1 request per second, 50 requests per day per account.",
+      operationId: "getFollowers",
+      parameters: [
+        {
+          name: "account_id",
+          in: "query",
+          required: true,
+          description: "Account ID from the Accounts endpoint",
+          schema: {
+            type: "string",
+            format: "uuid",
+            example: "7088c9ee-0f24-4314-a299-e8b09cb09826",
+          },
+        },
+        {
+          name: "page",
+          in: "query",
+          required: false,
+          description: "Page number for pagination",
+          schema: {
+            type: "integer",
+            minimum: 1,
+            default: 1,
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    profile: {
+                      type: "object",
+                      properties: {
+                        id: {
+                          type: "string",
+                          description:
+                            "LinkedIn unique identifier for the follower",
+                          example: "ACoAACKDTNYBrzX4Q79DlsLSnTAdb0VCLEfw0tY",
+                        },
+                        type: {
+                          type: "string",
+                          description: "Profile type, usually 'person'",
+                          example: "person",
+                        },
+                        full_name: {
+                          type: "string",
+                          description: "Follower's full name",
+                          example: "Jean Sultan 💻",
+                        },
+                        url: {
+                          type: "string",
+                          description: "LinkedIn profile URL",
+                          example:
+                            "https://www.linkedin.com/in/jean-sultan-💻-b32aba141",
+                        },
+                        headline: {
+                          type: "string",
+                          description: "Follower's headline",
+                          example:
+                            "J'ai plus de conversations avec des algorithmes 🤖\nqu'avec mes amis.",
+                        },
+                        profile_picture: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              height: {
+                                type: "integer",
+                                description: "Image height in pixels",
+                                example: 100,
+                              },
+                              width: {
+                                type: "integer",
+                                description: "Image width in pixels",
+                                example: 100,
+                              },
+                              url: {
+                                type: "string",
+                                description: "URL to profile picture",
+                                example:
+                                  "https://media.licdn.com/dms/image/v2/D4E03AQECzvIKwI9M5Q/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1730738693334?e=1749081600&v=beta&t=ieIlrCCWkztf57oLsCa7cGJqTfxi04c-lc2zcNzn98o",
+                              },
+                              expires_at: {
+                                type: "integer",
+                                description: "Timestamp when URL expires",
+                                example: 1737590400000,
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                example: [
+                  {
+                    profile: {
+                      id: "ACoAACKDTNYBrzX4Q79DlsLSnTAdb0VCLEfw0tY",
+                      type: "person",
+                      full_name: "Jean Sultan 💻",
+                      url: "https://www.linkedin.com/in/jean-sultan-💻-b32aba141",
+                      headline:
+                        "J'ai plus de conversations avec des algorithmes 🤖\nqu'avec mes amis.",
+                      profile_picture: [
+                        {
+                          height: 100,
+                          width: 100,
+                          url: "https://media.licdn.com/dms/image/v2/D4E03AQECzvIKwI9M5Q/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1730738693334?e=1749081600&v=beta&t=ieIlrCCWkztf57oLsCa7cGJqTfxi04c-lc2zcNzn98o",
+                          expires_at: 1737590400000,
+                        },
+                        {
+                          height: 200,
+                          width: 200,
+                          url: "https://media.licdn.com/dms/image/v2/D4E03AQECzvIKwI9M5Q/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1730738693334?e=1749081600&v=beta&t=CY08kJgJBrOsIEcNWCjTSj3VC89FitvswYVRVGZ0au0",
+                          expires_at: 1737590400000,
+                        },
+                        {
+                          height: 389,
+                          width: 389,
+                          url: "https://media.licdn.com/dms/image/v2/D4E03AQECzvIKwI9M5Q/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1730738693334?e=1749081600&v=beta&t=_JxqNFPwH11ci4VgLSnpXcITlxFewz0prZuyqwP8af4",
+                          expires_at: 1737590400000,
+                        },
+                        {
+                          height: 389,
+                          width: 389,
+                          url: "https://media.licdn.com/dms/image/v2/D4E03AQECzvIKwI9M5Q/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1730738693333?e=1749081600&v=beta&t=byNhDBIEVnHl4Nb9EeBGLCMzH2LPeIeNvKHqDN5gaCc",
+                          expires_at: 1737590400000,
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/private/company/followers": {
+    get: {
+      tags: ["Private"],
+      summary: "Get company followers",
+      description:
+        "Get a list of followers for a specific company page\n\n**Rate limit**: 1 request per second, 50 requests per day per account.",
+      operationId: "getCompanyFollowers",
+      parameters: [
+        {
+          name: "account_id",
+          in: "query",
+          required: true,
+          description: "Account ID from the Accounts endpoint",
+          schema: {
+            type: "string",
+            format: "uuid",
+            example: "7088c9ee-0f24-4314-a299-e8b09cb09826",
+          },
+        },
+        {
+          name: "url",
+          in: "query",
+          required: true,
+          description: "The URL or ID of the company",
+          schema: {
+            type: "string",
+            example: "https://www.linkedin.com/company/airbnb",
+          },
+        },
+        {
+          name: "follower_type",
+          in: "query",
+          required: false,
+          description: "Type of followers to retrieve",
+          schema: {
+            type: "string",
+            enum: ["MEMBER", "ORGANIZATIONAL_PAGE"],
+            default: "MEMBER",
+          },
+        },
+        {
+          name: "page",
+          in: "query",
+          required: false,
+          description: "Page number for pagination",
+          schema: {
+            type: "integer",
+            minimum: 1,
+            maximum: 100,
+            default: 1,
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    profile: {
+                      type: "object",
+                      properties: {
+                        id: {
+                          type: "string",
+                          description:
+                            "LinkedIn unique identifier for the follower",
+                          example: "ACoAACKDTNYBrzX4Q79DlsLSnTAdb0VCLEfw0tY",
+                        },
+                        type: {
+                          type: "string",
+                          description: "Profile type, usually 'person'",
+                          example: "person",
+                        },
+                        full_name: {
+                          type: "string",
+                          description: "Follower's full name",
+                          example: "Jean Sultan 💻",
+                        },
+                        url: {
+                          type: "string",
+                          description: "LinkedIn profile URL",
+                          example:
+                            "https://www.linkedin.com/in/jean-sultan-💻-b32aba141",
+                        },
+                        headline: {
+                          type: "string",
+                          description: "Follower's headline",
+                          example:
+                            "J'ai plus de conversations avec des algorithmes 🤖\nqu'avec mes amis.",
+                        },
+                        profile_picture: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              height: {
+                                type: "integer",
+                                description: "Image height in pixels",
+                                example: 100,
+                              },
+                              width: {
+                                type: "integer",
+                                description: "Image width in pixels",
+                                example: 100,
+                              },
+                              url: {
+                                type: "string",
+                                description: "URL to profile picture",
+                                example:
+                                  "https://media.licdn.com/dms/image/v2/D4E03AQECzvIKwI9M5Q/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1730738693334?e=1749081600&v=beta&t=ieIlrCCWkztf57oLsCa7cGJqTfxi04c-lc2zcNzn98o",
+                              },
+                              expires_at: {
+                                type: "integer",
+                                description: "Timestamp when URL expires",
+                                example: 1737590400000,
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                example: [
+                  {
+                    profile: {
+                      id: "ACoAACKDTNYBrzX4Q79DlsLSnTAdb0VCLEfw0tY",
+                      type: "person",
+                      full_name: "Jean Sultan 💻",
+                      url: "https://www.linkedin.com/in/jean-sultan-💻-b32aba141",
+                      headline:
+                        "J'ai plus de conversations avec des algorithmes 🤖\nqu'avec mes amis.",
+                      profile_picture: [
+                        {
+                          height: 100,
+                          width: 100,
+                          url: "https://media.licdn.com/dms/image/v2/D4E03AQECzvIKwI9M5Q/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1730738693334?e=1749081600&v=beta&t=ieIlrCCWkztf57oLsCa7cGJqTfxi04c-lc2zcNzn98o",
+                          expires_at: 1737590400000,
+                        },
+                        {
+                          height: 200,
+                          width: 200,
+                          url: "https://media.licdn.com/dms/image/v2/D4E03AQECzvIKwI9M5Q/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1730738693334?e=1749081600&v=beta&t=CY08kJgJBrOsIEcNWCjTSj3VC89FitvswYVRVGZ0au0",
+                          expires_at: 1737590400000,
+                        },
+                        {
+                          height: 389,
+                          width: 389,
+                          url: "https://media.licdn.com/dms/image/v2/D4E03AQECzvIKwI9M5Q/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1730738693334?e=1749081600&v=beta&t=_JxqNFPwH11ci4VgLSnpXcITlxFewz0prZuyqwP8af4",
+                          expires_at: 1737590400000,
+                        },
+                        {
+                          height: 389,
+                          width: 389,
+                          url: "https://media.licdn.com/dms/image/v2/D4E03AQECzvIKwI9M5Q/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1730738693333?e=1749081600&v=beta&t=byNhDBIEVnHl4Nb9EeBGLCMzH2LPeIeNvKHqDN5gaCc",
+                          expires_at: 1737590400000,
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/private/message": {
+    get: {
+      tags: ["Private"],
+      summary: "Get conversation messages",
+      description:
+        "Get messages from a specific conversation thread\n\n**Rate limit**: 1 request per second, 50 requests per day per account.",
+      operationId: "getMessages",
+      parameters: [
+        {
+          name: "account_id",
+          in: "query",
+          required: true,
+          description: "Account ID from the Accounts endpoint",
+          schema: {
+            type: "string",
+            format: "uuid",
+            example: "7088c9ee-0f24-4314-a299-e8b09cb09826",
+          },
+        },
+        {
+          name: "thread_id",
+          in: "query",
+          required: true,
+          description: "The thread ID of the conversation",
+          schema: {
+            type: "string",
+            example:
+              "2-MTc1MTc1MzUxNTAyMWI4MDA5NS0xMDAmYWQzYTQzZDAtOGZhZC00OGRlLTkwMjQtZDJjNzgxYzY0Nzk3XzAxMg==",
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: {
+                      type: "string",
+                      description: "LinkedIn message URN identifier",
+                      example:
+                        "urn:li:msg_message:(urn:li:fsd_profile:ACoAADk_dkkBUgoY3JZwOoVwWnmNT5Vul2dScAw,2-MTc1MTc1MzUxNTAyMWI4MDA5NS0xMDAmYWQzYTQzZDAtOGZhZC00OGRlLTkwMjQtZDJjNzgxYzY0Nzk3XzAxMg==)",
+                    },
+                    date: {
+                      type: "string",
+                      description: "ISO timestamp of when the message was sent",
+                      example: "2025-07-05T22:11:55.021Z",
+                    },
+                    is_read: {
+                      type: "boolean",
+                      nullable: true,
+                      description:
+                        "Whether the message has been read (null if unknown)",
+                      example: null,
+                    },
+                    text: {
+                      type: "string",
+                      description: "The message text content",
+                      example:
+                        "Tu me fais rire maintenant avec ton mariage à un demi million",
+                    },
+                    post_shared: {
+                      type: "string",
+                      nullable: true,
+                      description:
+                        "URL of LinkedIn post shared in the message (null if none)",
+                      example:
+                        "https://www.linkedin.com/feed/update/urn:li:activity:7346485377353805824",
+                    },
+                    reaction: {
+                      type: "string",
+                      nullable: true,
+                      description:
+                        "Emoji reaction to the message (null if none)",
+                      example: "❤️",
+                    },
+                    sender: {
+                      type: "object",
+                      properties: {
+                        id: {
+                          type: "string",
+                          description:
+                            "LinkedIn unique identifier for the sender",
+                          example: "ACoAADk_dkkBUgoY3JZwOoVwWnmNT5Vul2dScAw",
+                        },
+                        type: {
+                          type: "string",
+                          description: "Profile type, usually 'person'",
+                          example: "person",
+                        },
+                        full_name: {
+                          type: "string",
+                          description: "Sender's full name",
+                          example: "Joris Delorme",
+                        },
+                        url: {
+                          type: "string",
+                          description: "LinkedIn profile URL",
+                          example:
+                            "https://www.linkedin.com/in/ACoAADk_dkkBUgoY3JZwOoVwWnmNT5Vul2dScAw",
+                        },
+                        headline: {
+                          type: "string",
+                          description: "Sender's headline",
+                          example:
+                            "Founder of Ghost Genius - Fâché avec la langue de Molière, alors j'écris du code.",
+                        },
+                        profile_picture: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              height: {
+                                type: "integer",
+                                description: "Image height in pixels",
+                                example: 100,
+                              },
+                              width: {
+                                type: "integer",
+                                description: "Image width in pixels",
+                                example: 100,
+                              },
+                              url: {
+                                type: "string",
+                                description: "URL to profile picture",
+                                example:
+                                  "https://media.licdn.com/dms/image/v2/D4E03AQH0TT2Fp8YS2g/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1693474691125?e=1756339200&v=beta&t=9Tv8t1mUVkjgSxysvnPY9z9IYgDf0gRqHiSARR0PsLM",
+                              },
+                              expires_at: {
+                                type: "integer",
+                                description: "Timestamp when URL expires",
+                                example: 1737590400000,
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                example: [
+                  {
+                    id: "urn:li:msg_message:(urn:li:fsd_profile:ACoAADk_dkkBUgoY3JZwOoVwWnmNT5Vul2dScAw,2-MTc1MTc1MzUxNTAyMWI4MDA5NS0xMDAmYWQzYTQzZDAtOGZhZC00OGRlLTkwMjQtZDJjNzgxYzY0Nzk3XzAxMg==)",
+                    date: "2025-07-05T22:11:55.021Z",
+                    is_read: null,
+                    text: "",
+                    post_shared:
+                      "https://www.linkedin.com/feed/update/urn:li:activity:7346485377353805824",
+                    reaction: "❤️",
+                    sender: {
+                      id: "ACoAADk_dkkBUgoY3JZwOoVwWnmNT5Vul2dScAw",
+                      type: "person",
+                      full_name: "Joris Delorme",
+                      url: "https://www.linkedin.com/in/ACoAADk_dkkBUgoY3JZwOoVwWnmNT5Vul2dScAw",
+                      headline:
+                        "Founder of Ghost Genius - Fâché avec la langue de Molière, alors j'écris du code.",
+                      profile_picture: [
+                        {
+                          height: 100,
+                          width: 100,
+                          url: "https://media.licdn.com/dms/image/v2/D4E03AQH0TT2Fp8YS2g/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1693474691125?e=1756339200&v=beta&t=9Tv8t1mUVkjgSxysvnPY9z9IYgDf0gRqHiSARR0PsLM",
+                          expires_at: 1737590400000,
+                        },
+                        {
+                          height: 200,
+                          width: 200,
+                          url: "https://media.licdn.com/dms/image/v2/D4E03AQH0TT2Fp8YS2g/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1693474691125?e=1756339200&v=beta&t=Tw7TMMDPWrizGLIKly8H1U6VK3DgNDJt-lqgjltoLl8",
+                          expires_at: 1737590400000,
+                        },
+                        {
+                          height: 400,
+                          width: 400,
+                          url: "https://media.licdn.com/dms/image/v2/D4E03AQH0TT2Fp8YS2g/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1693474691125?e=1756339200&v=beta&t=iWmNy-y0u8uvN-NwnAU2_gqi__NAX0KKEg5xqGYHccc",
+                          expires_at: 1737590400000,
+                        },
+                        {
+                          height: 800,
+                          width: 800,
+                          url: "https://media.licdn.com/dms/image/v2/D4E03AQH0TT2Fp8YS2g/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1693474691125?e=1756339200&v=beta&t=m7Di1DF8PXVvQgknWq_BcLHThrQyZMJAxduJZrtCyas",
+                          expires_at: 1737590400000,
+                        },
+                      ],
+                    },
+                  },
+                  {
+                    id: "urn:li:msg_message:(urn:li:fsd_profile:ACoAADk_dkkBUgoY3JZwOoVwWnmNT5Vul2dScAw,2-MTc1MTM3NTY5MTE2N2IxNDY3MC0xMDAmYWQzYTQzZDAtOGZhZC00OGRlLTkwMjQtZDJjNzgxYzY0Nzk3XzAxMg==)",
+                    date: "2025-07-01T13:14:51.167Z",
+                    is_read: null,
+                    text: "Tu me fais rire maintenant avec ton mariage à un demi million",
+                    post_shared:
+                      "https://www.linkedin.com/feed/update/urn:li:activity:7345433536927080449",
+                    reaction: null,
+                    sender: {
+                      id: "ACoAADk_dkkBUgoY3JZwOoVwWnmNT5Vul2dScAw",
+                      type: "person",
+                      full_name: "Joris Delorme",
+                      url: "https://www.linkedin.com/in/ACoAADk_dkkBUgoY3JZwOoVwWnmNT5Vul2dScAw",
+                      headline:
+                        "Founder of Ghost Genius - Fâché avec la langue de Molière, alors j'écris du code.",
+                      profile_picture: [
+                        {
+                          height: 100,
+                          width: 100,
+                          url: "https://media.licdn.com/dms/image/v2/D4E03AQH0TT2Fp8YS2g/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1693474691125?e=1756339200&v=beta&t=9Tv8t1mUVkjgSxysvnPY9z9IYgDf0gRqHiSARR0PsLM",
+                          expires_at: 1737590400000,
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/private/sales-navigator": {
+    get: {
+      tags: ["Private"],
+      summary: "Search Sales Navigator profiles",
+      description:
+        "REQUIRES A SALES NAVIGATOR ACCOUNT.\n\nSearch for profiles using LinkedIn Sales Navigator with advanced filters like location, company, title, and more.\n\n**Rate limit**: 100 requests per day per Sales Navigator account.",
+      operationId: "searchSalesNavigatorProfiles",
+      parameters: [
+        {
+          name: "account_id",
+          in: "query",
+          required: true,
+          description: "Account ID from the Accounts endpoint",
+          schema: {
+            type: "string",
+            format: "uuid",
+            example: "7088c9ee-0f24-4314-a299-e8b09cb09826",
+          },
+        },
+        {
+          name: "keywords",
+          in: "query",
+          required: false,
+          description: "Search keywords to find profiles",
+          schema: {
+            type: "string",
+            example: "CEO",
+          },
+        },
+        {
+          name: "page",
+          in: "query",
+          required: false,
+          description: "Page number for pagination",
+          schema: {
+            type: "integer",
+            minimum: 1,
+            maximum: 100,
+            default: 1,
+          },
+        },
+        {
+          name: "locations",
+          in: "query",
+          required: false,
+          description:
+            "Filter by location IDs (comma-separated). \n\nFind location IDs using our [🔗 Location ID Finder](https://www.ghostgenius.fr/tools/search-sales-navigator-locations-id).",
+          schema: {
+            type: "string",
+            example: "105015875,105015876",
+          },
+        },
+        {
+          name: "current_company",
+          in: "query",
+          required: false,
+          description:
+            "Filter by current company IDs (comma-separated).\n\nFind school IDs using our [🔗 School ID Finder](https://www.ghostgenius.fr/tools/search-sales-navigator-companies-id).",
+          schema: {
+            type: "string",
+            example: "309694,123456",
+          },
+        },
+        {
+          name: "company_headcount",
+          in: "query",
+          required: false,
+          description: "Filter by company headcount ranges (comma-separated)",
+          schema: {
+            type: "string",
+            example: "C, D",
+          },
+        },
+        {
+          name: "company_headquarters",
+          in: "query",
+          required: false,
+          description:
+            "Filter by company headquarters locations (comma-separated)",
+          schema: {
+            type: "string",
+            example: "105015875,105015876",
+          },
+        },
+        {
+          name: "recently_changed_jobs",
+          in: "query",
+          required: false,
+          description: "Filter for profiles that recently changed jobs",
+          schema: {
+            type: "boolean",
+          },
+        },
+        {
+          name: "posted_on_linkedin",
+          in: "query",
+          required: false,
+          description: "Filter for profiles that posted on LinkedIn",
+          schema: {
+            type: "boolean",
+          },
+        },
+        {
+          name: "past_company",
+          in: "query",
+          required: false,
+          description: "Filter by past company IDs (comma-separated)",
+          schema: {
+            type: "string",
+            example: "309694,123456",
+          },
+        },
+        {
+          name: "company_type",
+          in: "query",
+          required: false,
+          description: "Filter by company types (comma-separated)",
+          schema: {
+            type: "string",
+            example: "P, S",
+          },
+        },
+        {
+          name: "function",
+          in: "query",
+          required: false,
+          description: "Filter by job functions (comma-separated)",
+          schema: {
+            type: "string",
+            example: "engineering, sales",
+          },
+        },
+        {
+          name: "current_title",
+          in: "query",
+          required: false,
+          description:
+            "Filter by current job titles IDs (comma-separated). \n\nFind title IDs using our [🔗 Current Title ID Finder](https://www.ghostgenius.fr/tools/search-sales-navigator-current-titles-id).",
+          schema: {
+            type: "string",
+            example: "10001,10002",
+          },
+        },
+        {
+          name: "seniority_level",
+          in: "query",
+          required: false,
+          description: "Filter by seniority levels (comma-separated)",
+          schema: {
+            type: "string",
+            example: "C, D",
+          },
+        },
+        {
+          name: "past_title",
+          in: "query",
+          required: false,
+          description: "Filter by past job titles (comma-separated)",
+          schema: {
+            type: "string",
+            example: "ceo, founder",
+          },
+        },
+        {
+          name: "years_at_current_company",
+          in: "query",
+          required: false,
+          description:
+            "Filter by years at current company ranges (comma-separated)",
+          schema: {
+            type: "string",
+            example: "1, 2",
+          },
+        },
+        {
+          name: "years_in_current_position",
+          in: "query",
+          required: false,
+          description:
+            "Filter by years in current position ranges (comma-separated)",
+          schema: {
+            type: "string",
+            example: "1, 2",
+          },
+        },
+        {
+          name: "industry",
+          in: "query",
+          required: false,
+          description: "Filter by industries (comma-separated)",
+          schema: {
+            type: "string",
+            example: "4, 96",
+          },
+        },
+        {
+          name: "first_name",
+          in: "query",
+          required: false,
+          description: "Filter by first name",
+          schema: {
+            type: "string",
+            example: "John",
+          },
+        },
+        {
+          name: "last_name",
+          in: "query",
+          required: false,
+          description: "Filter by last name",
+          schema: {
+            type: "string",
+            example: "Doe",
+          },
+        },
+        {
+          name: "profile_language",
+          in: "query",
+          required: false,
+          description: "Filter by profile languages (comma-separated)",
+          schema: {
+            type: "string",
+            example: "en, fr",
+          },
+        },
+        {
+          name: "years_of_experience",
+          in: "query",
+          required: false,
+          description: "Filter by years of experience ranges (comma-separated)",
+          schema: {
+            type: "string",
+            example: "1, 2",
+          },
+        },
+        {
+          name: "school",
+          in: "query",
+          required: false,
+          description:
+            "Filter by school IDs (comma-separated). \n\nFind school IDs using our [🔗 School ID Finder](https://www.ghostgenius.fr/tools/search-sales-navigator-companies-id).",
+          schema: {
+            type: "string",
+            example: "123456,789012",
+          },
+        },
+        {
+          name: "excluded_locations",
+          in: "query",
+          required: false,
+          description:
+            "Exclude profiles from specific locations (comma-separated)",
+          schema: {
+            type: "string",
+            example: "105015875,105015876",
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  total: {
+                    type: "integer",
+                    description: "Total number of results",
+                    example: 10583438,
+                  },
+                  data: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        id: {
+                          type: "string",
+                          description:
+                            "LinkedIn unique identifier for the profile",
+                          example: "ACwAAAfwCpsBGL0CTA0muI-80THRYBnp-uczSQ4",
+                        },
+                        type: {
+                          type: "string",
+                          description: "Profile type, always 'person'",
+                          example: "person",
+                        },
+                        full_name: {
+                          type: "string",
+                          description: "User's full name",
+                          example: "Atul Mahableshwarkar",
+                        },
+                        url: {
+                          type: "string",
+                          description: "LinkedIn profile URL",
+                          example:
+                            "https://www.linkedin.com/in/ACwAAAfwCpsBGL0CTA0muI-80THRYBnp-uczSQ4",
+                        },
+                        headline: {
+                          type: "string",
+                          description: "User's headline",
+                          example: "",
+                        },
+                        profile_picture: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              height: {
+                                type: "integer",
+                                description: "Image height in pixels",
+                                example: 100,
+                              },
+                              width: {
+                                type: "integer",
+                                description: "Image width in pixels",
+                                example: 100,
+                              },
+                              url: {
+                                type: "string",
+                                description: "URL to profile picture",
+                                example:
+                                  "https://media.licdn.com/dms/image/v2/C5603AQEfNeKJ9uxxwA/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1587315925186?e=1751500800&v=beta&t=o5fofxx8NiaD2gZbCQrW6osDeb4UFM_EwVm74HPeN_4",
+                              },
+                              expires_at: {
+                                type: "integer",
+                                description: "Timestamp when URL expires",
+                                example: 1737590400000,
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/private/request-connection": {
+    post: {
+      tags: ["Private"],
+      summary: "Send connection request",
+      description:
+        "Send a connection request to another LinkedIn user\n\n**Rate limit**: 1 request per second, 50 requests per day per account.",
+      operationId: "requestConnection",
+      parameters: [
+        {
+          name: "account_id",
+          in: "query",
+          required: true,
+          description: "Account ID from the Accounts endpoint",
+          schema: {
+            type: "string",
+            format: "uuid",
+            example: "7088c9ee-0f24-4314-a299-e8b09cb09826",
+          },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                profile_id: {
+                  type: "string",
+                  description:
+                    "LinkedIn unique identifier for the profile to send connection request to",
+                  example: "ACoAABRpzIUBFIIi9aId5An7_1milF8dKFgHWms",
+                },
+              },
+              required: ["profile_id"],
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Connection request sent successfully",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: {
+                    type: "boolean",
+                    example: true,
+                  },
+                  message: {
+                    type: "string",
+                    example: "Connection request sent successfully",
+                  },
+                },
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Error occurred while sending connection request",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: {
+                    type: "boolean",
+                    example: false,
+                  },
+                  message: {
+                    type: "string",
+                    example: "An error occurred while requesting connection",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/contact/email": {
+    get: {
+      tags: ["Contact"],
+      summary: "Get email",
+      description:
+        "Get an email from a LinkedIn user, cost 2 credits if successful else 0 credits.",
+      operationId: "getEmail",
+      parameters: [
+        {
+          name: "company_url",
+          in: "query",
+          required: true,
+          description: "Company URL",
+          schema: {
+            type: "string",
+            example: "https://www.apple.com",
+          },
+        },
+        {
+          name: "first_name",
+          in: "query",
+          required: true,
+          description: "First name",
+          schema: {
+            type: "string",
+            example: "Steve",
+          },
+        },
+        {
+          name: "last_name",
+          in: "query",
+          required: true,
+          description: "Last name",
+          schema: {
+            type: "string",
+            example: "Jobs",
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Email retrieved successfully",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: {
+                    type: "boolean",
+                    example: true,
+                    description: "Whether the email was retrieved successfully",
+                  },
+                  email: {
+                    type: "string",
+                    example: "steve@apple.com",
+                    description: "Email address",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/contact/email-verifier": {
+    get: {
+      tags: ["Contact"],
+      summary: "Verify email",
+      description: "Verify an email address, cost 1 credit.",
+      operationId: "verifyEmail",
+      parameters: [
+        {
+          name: "email",
+          in: "query",
+          required: true,
+          description: "Email address",
+          schema: {
+            type: "string",
+            example: "steve@apple.com",
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Email verified successfully",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  email: {
+                    type: "string",
+                    example: "steve@apple.com",
+                    description: "Email address",
+                  },
+                  valid: {
+                    type: "boolean",
+                    example: true,
+                    description: "Whether the email was verified successfully",
+                  },
+                  result_code: {
+                    type: "integer",
+                    example: 1,
+                    description:
+                      "1 (ok), 2 (catch_all), 3 (unknown), 4 (error), 5 (disposable), 6 (invalid)",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/contact/phone": {
+    get: {
+      tags: ["Contact"],
+      summary: "Get phone number",
+      description:
+        "Get phone number from a LinkedIn profile, cost 20 credits if successful else 0 credits.",
+      operationId: "getPhone",
+      parameters: [
+        {
+          name: "url",
+          in: "query",
+          required: true,
+          description: "LinkedIn profile URL",
+          schema: {
+            type: "string",
+            example: "https://www.linkedin.com/in/joris-delorme-b757a5229",
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Phone number retrieved successfully or not found",
+          content: {
+            "application/json": {
+              schema: {
+                oneOf: [
+                  {
+                    type: "object",
+                    properties: {
+                      success: {
+                        type: "boolean",
+                        example: true,
+                        description:
+                          "Whether the phone number was retrieved successfully",
+                      },
+                      message: {
+                        type: "string",
+                        nullable: true,
+                        example: null,
+                        description: "Error message if any",
+                      },
+                      raw_format: {
+                        type: "string",
+                        example: "+33767743610",
+                        description: "Phone number in raw format",
+                      },
+                      international_format: {
+                        type: "string",
+                        example: "+33 7 67 74 36 10",
+                        description: "Phone number in international format",
+                      },
+                      national_format: {
+                        type: "string",
+                        example: "07 67 74 36 10",
+                        description: "Phone number in national format",
+                      },
+                      prefix: {
+                        type: "string",
+                        example: "+33",
+                        description: "Country prefix",
+                      },
+                      country_name: {
+                        type: "string",
+                        example: "France",
+                        description: "Country name",
+                      },
+                      country_code: {
+                        type: "string",
+                        example: "FR",
+                        description: "Country code",
+                      },
+                      free: {
+                        type: "boolean",
+                        example: true,
+                        description: "Whether this was a free request",
+                      },
+                    },
+                    required: [
+                      "success",
+                      "message",
+                      "raw_format",
+                      "international_format",
+                      "national_format",
+                      "prefix",
+                      "country_name",
+                      "country_code",
+                      "free",
+                    ],
+                  },
+                  {
+                    type: "object",
+                    properties: {
+                      success: {
+                        type: "boolean",
+                        example: false,
+                        description:
+                          "Whether the phone number was retrieved successfully",
+                      },
+                      message: {
+                        type: "string",
+                        example:
+                          "We couldn't find the mobile associated with that profile.",
+                        description: "Error message",
+                      },
+                    },
+                    required: ["success", "message"],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/private/message-threads": {
+    get: {
+      tags: ["Private"],
+      summary: "Get message threads",
+      description:
+        "Get a list of message threads from LinkedIn\n\n**Rate limit**: 1 request per second, 50 requests per day per account.",
+      operationId: "getMessageThreads",
+      parameters: [
+        {
+          name: "account_id",
+          in: "query",
+          required: true,
+          description: "Account ID from the Accounts endpoint",
+          schema: {
+            type: "string",
+            format: "uuid",
+            example: "7088c9ee-0f24-4314-a299-e8b09cb09826",
+          },
+        },
+        {
+          name: "pagination_token",
+          in: "query",
+          required: false,
+          description: "Token for pagination to get next page of results",
+          schema: {
+            type: "string",
+            example:
+              "REVTQ0VORElORyYxNzQyNzIwOTQwMzQ2JjItWmpNeU1EbG1ZMlF0TUdNeE55MDBaVE5tTFRrMFpESXRNbUkzTXpBNE9XSTVNakZsWHpBeE1nPT0=",
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  threads: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        id: {
+                          type: "string",
+                          description:
+                            "Unique identifier for the message thread",
+                          example:
+                            "2-MTc1MjAwOTktYzM0Mi00ZmE5LWFhMTMtZTFkY2YzYmE4MTU1XzAxMg==",
+                        },
+                        last_activity_at: {
+                          type: "integer",
+                          description:
+                            "Timestamp of the last activity in the thread",
+                          example: 1747218001724,
+                        },
+                        read: {
+                          type: "boolean",
+                          description: "Whether the thread has been read",
+                          example: true,
+                        },
+                        participants: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              id: {
+                                type: "string",
+                                description:
+                                  "LinkedIn unique identifier for the participant",
+                                example:
+                                  "ACoAAA4hn0oBoCJcsICO4n7mF1Blak7MlFuNFgU",
+                              },
+                              type: {
+                                type: "string",
+                                description: "Profile type, usually 'person'",
+                                example: "person",
+                              },
+                              full_name: {
+                                type: "string",
+                                description: "Participant's full name",
+                                example: "Hugo Caillier",
+                              },
+                              url: {
+                                type: "string",
+                                description: "LinkedIn profile URL",
+                                example:
+                                  "https://www.linkedin.com/in/ACoAAA4hn0oBoCJcsICO4n7mF1Blak7MlFuNFgU",
+                              },
+                              profile_picture: {
+                                type: "array",
+                                items: {
+                                  type: "object",
+                                  properties: {
+                                    height: {
+                                      type: "integer",
+                                      description: "Image height in pixels",
+                                      example: 100,
+                                    },
+                                    width: {
+                                      type: "integer",
+                                      description: "Image width in pixels",
+                                      example: 100,
+                                    },
+                                    url: {
+                                      type: "string",
+                                      description: "URL to profile picture",
+                                      example:
+                                        "https://media.licdn.com/dms/image/v2/D5603AQHxaigscy-BVA/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1701703891053?e=1756339200&v=beta&t=buYr8E2rurWvQwKH49rWUKIKbB_18vBrJ82jMkHTAgM",
+                                    },
+                                    expires_at: {
+                                      type: "integer",
+                                      description: "Timestamp when URL expires",
+                                      example: 1737590400000,
+                                    },
+                                  },
+                                  required: [
+                                    "height",
+                                    "width",
+                                    "url",
+                                    "expires_at",
+                                  ],
+                                },
+                              },
+                            },
+                            required: [
+                              "id",
+                              "type",
+                              "full_name",
+                              "url",
+                              "profile_picture",
+                            ],
+                          },
+                        },
+                      },
+                      required: [
+                        "id",
+                        "last_activity_at",
+                        "read",
+                        "participants",
+                      ],
+                    },
+                  },
+                  pagination_token: {
+                    type: "string",
+                    description:
+                      "Token for pagination to get next page of results",
+                    example:
+                      "REVTQ0VORElORyYxNzQyNzIwOTQwMzQ2JjItWmpNeU1EbG1ZMlF0TUdNeE55MDBaVE5tTFRrMFpESXRNbUkzTXpBNE9XSTVNakZsWHpBeE1nPT0=",
+                  },
+                },
+                required: ["threads", "pagination_token"],
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/private/pending-connections": {
+    post: {
+      tags: ["Private"],
+      summary: "Get pending connections",
+      description:
+        "Get a list of pending LinkedIn connection invitations.\n\n**Rate limit**: 1 request per second, 50 requests per day per account.",
+      operationId: "getPendingConnections",
+      parameters: [
+        {
+          name: "account_id",
+          in: "query",
+          required: true,
+          description: "Account ID from the Accounts endpoint",
+          schema: {
+            type: "string",
+            format: "uuid",
+            example: "7088c9ee-0f24-4314-a299-e8b09cb09826",
+          },
+        },
+        {
+          name: "page",
+          in: "query",
+          required: false,
+          description: "Page number for pagination",
+          schema: {
+            type: "integer",
+            minimum: 1,
+            default: 1,
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  page: { type: "integer", example: 1 },
+                  count: { type: "integer", example: 10 },
+                  items: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        id: {
+                          type: "string",
+                          description: "LinkedIn unique profile identifier",
+                        },
+                        publi_id: {
+                          type: "string",
+                          description: "LinkedIn public identifier (slug)",
+                        },
+                        member_id: {
+                          type: "string",
+                          description: "LinkedIn internal member ID",
+                        },
+                        first_name: { type: "string" },
+                        last_name: { type: "string" },
+                        invitation_id: {
+                          type: "string",
+                          description: "Invitation identifier",
+                        },
+                        url: {
+                          type: "string",
+                          description: "LinkedIn profile URL",
+                        },
+                        full_name: { type: "string" },
+                        sent_date: {
+                          type: "string",
+                          description: "Date of the invitation",
+                        },
+                      },
+                    },
+                  },
+                },
+                example: {
+                  page: 1,
+                  count: 10,
+                  items: [
+                    {
+                      id: "ACoAACgBMmABO6zmrVSrpPHBUpD6DzCpcFxTIBE",
+                      publi_id: "elliot-ben-soussan-a54932168",
+                      member_id: "671167072",
+                      first_name: "Elliot",
+                      last_name: "Ben Soussan",
+                      invitation_id: "7297657165207543808",
+                      url: "https://www.linkedin.com/in/elliot-ben-soussan-a54932168/",
+                      full_name: "Elliot Ben Soussan",
+                      sent_date: "Sent 6 months ago",
+                    },
+                    {
+                      id: "ACoAACHAP1cB9DuPf91-XG3l4jcuNUDxxYW3HEM",
+                      publi_id: "marcpineau10",
+                      member_id: "566247255",
+                      first_name: "Marc",
+                      last_name: "Pineau",
+                      invitation_id: "7297657161189314560",
+                      url: "https://www.linkedin.com/in/marcpineau10/",
+                      full_name: "Marc Pineau",
+                      sent_date: "Sent 6 months ago",
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/private/employees-growth": {
+    get: {
+      tags: ["Private"],
+      summary: "Get employees growth",
+      description:
+        "REQUIRES A SALES NAVIGATOR OR PREMIUM ACCOUNT.\n\nGet a company's headcount history and growth metrics.\n\n**Rate limit**: 1 request per second, 50 requests per day per account.",
+      operationId: "getEmployeesGrowth",
+      parameters: [
+        {
+          name: "account_id",
+          in: "query",
+          required: true,
+          description: "Account ID from the Accounts endpoint",
+          schema: {
+            type: "string",
+            format: "uuid",
+            example: "7088c9ee-0f24-4314-a299-e8b09cb09826",
+          },
+        },
+        {
+          name: "url",
+          in: "query",
+          required: true,
+          description: "The URL or ID of the company",
+          schema: {
+            type: "string",
+            example: "https://www.linkedin.com/company/airbnb",
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  growth_6_months: {
+                    type: "integer",
+                    description: "Percentage growth over the last 6 months",
+                    example: 11,
+                  },
+                  growth_1_year: {
+                    type: "integer",
+                    description: "Percentage growth over the last year",
+                    example: 27,
+                  },
+                  growth_2_years: {
+                    type: "integer",
+                    description: "Percentage growth over the last 2 years",
+                    example: 31,
+                  },
+                  employees: {
+                    type: "integer",
+                    description: "Current number of employees",
+                    example: 89533,
+                  },
+                  headcount_growth: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        date: {
+                          type: "string",
+                          format: "date-time",
+                        },
+                        employees: {
+                          type: "integer",
+                        },
+                      },
+                    },
+                    example: [
+                      {
+                        date: "2023-09-01T00:00:00.000Z",
+                        employees: 68237,
+                      },
+                      {
+                        date: "2023-10-01T00:00:00.000Z",
+                        employees: 68729,
+                      },
+                      {
+                        date: "2023-11-01T00:00:00.000Z",
+                        employees: 69102,
+                      },
+                      {
+                        date: "2023-12-01T00:00:00.000Z",
+                        employees: 68791,
+                      },
+                      {
+                        date: "2024-01-01T00:00:00.000Z",
+                        employees: 68575,
+                      },
+                      {
+                        date: "2024-02-01T00:00:00.000Z",
+                        employees: 68415,
+                      },
+                      {
+                        date: "2024-03-01T00:00:00.000Z",
+                        employees: 68322,
+                      },
+                      {
+                        date: "2024-04-01T00:00:00.000Z",
+                        employees: 68308,
+                      },
+                      {
+                        date: "2024-05-01T00:00:00.000Z",
+                        employees: 68287,
+                      },
+                      {
+                        date: "2024-06-01T00:00:00.000Z",
+                        employees: 68529,
+                      },
+                      {
+                        date: "2024-07-01T00:00:00.000Z",
+                        employees: 68758,
+                      },
+                      {
+                        date: "2024-08-01T00:00:00.000Z",
+                        employees: 69102,
+                      },
+                      {
+                        date: "2024-09-01T00:00:00.000Z",
+                        employees: 70273,
+                      },
+                      {
+                        date: "2024-10-01T00:00:00.000Z",
+                        employees: 72175,
+                      },
+                      {
+                        date: "2024-11-01T00:00:00.000Z",
+                        employees: 73942,
+                      },
+                      {
+                        date: "2024-12-01T00:00:00.000Z",
+                        employees: 75160,
+                      },
+                      {
+                        date: "2025-01-01T00:00:00.000Z",
+                        employees: 76871,
+                      },
+                      {
+                        date: "2025-02-01T00:00:00.000Z",
+                        employees: 78553,
+                      },
+                      {
+                        date: "2025-03-01T00:00:00.000Z",
+                        employees: 80331,
+                      },
+                      {
+                        date: "2025-04-01T00:00:00.000Z",
+                        employees: 82319,
+                      },
+                      {
+                        date: "2025-05-01T00:00:00.000Z",
+                        employees: 84287,
+                      },
+                      {
+                        date: "2025-06-01T00:00:00.000Z",
+                        employees: 86046,
+                      },
+                      {
+                        date: "2025-07-01T00:00:00.000Z",
+                        employees: 87961,
+                      },
+                      {
+                        date: "2025-08-01T00:00:00.000Z",
+                        employees: 89533,
+                      },
+                      {
+                        date: "2025-09-01T00:00:00.000Z",
+                        employees: 89533,
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/private/connection-status": {
+    get: {
+      tags: ["Private"],
+      summary: "Get connection status",
+      description:
+        "Check if the authenticated account is connected with a specific LinkedIn profile.\n\n**Rate limit**: 1 request per second, 50 requests per day per account.",
+      operationId: "getConnectionStatus",
+      parameters: [
+        {
+          name: "account_id",
+          in: "query",
+          required: true,
+          description: "Account ID from the Accounts endpoint",
+          schema: {
+            type: "string",
+            format: "uuid",
+            example: "7088c9ee-0f24-4314-a299-e8b09cb09826",
+          },
+        },
+        {
+          name: "url",
+          in: "query",
+          required: true,
+          description: "The URL or ID of the profile",
+          schema: {
+            type: "string",
+            example: "https://www.linkedin.com/in/joris-delorme-b757a5229",
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Successful response",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  status: {
+                    type: "string",
+                    description:
+                      "Connection status between the account and the profile",
+                    enum: ["invited", "connected", "not_connected"],
+                    example: "connected",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/private/remove-connection": {
+    post: {
+      tags: ["Private"],
+      summary: "Remove connection",
+      description:
+        "Remove a LinkedIn connection.\n\n**Rate limit**: 1 request per second, 50 requests per day per account.",
+      operationId: "removeConnection",
+      parameters: [
+        {
+          name: "account_id",
+          in: "query",
+          required: true,
+          description: "Account ID from the Accounts endpoint",
+          schema: {
+            type: "string",
+            format: "uuid",
+            example: "7088c9ee-0f24-4314-a299-e8b09cb09826",
+          },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                id: {
+                  type: "string",
+                  description: "LinkedIn unique profile identifier",
+                },
+                publi_id: {
+                  type: "string",
+                  description: "LinkedIn public identifier (slug)",
+                },
+                member_id: {
+                  type: "string",
+                  description: "LinkedIn internal member ID",
+                },
+                first_name: { type: "string" },
+                last_name: { type: "string" },
+                invitation_id: {
+                  type: "string",
+                  description: "Invitation identifier",
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Connection removed successfully",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  message: {
+                    type: "string",
+                    example: "Connection removed successfully",
+                  },
+                },
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Error occurred while removing connection",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: false },
+                  message: {
+                    type: "string",
+                    example: "An error occurred while removing connection",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+const doc = {
+  openapi: "3.0.0",
+  info: {
+    title: "LinkedIn API",
+    version: "2.0.0",
+    description:
+      "Complete reference documentation for the Ghost Genius LinkedIn API",
+  },
+  servers: [
+    {
+      url: "https://api.ghostgenius.fr/v2",
+    },
+  ],
+  paths: {},
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "gg_xxxxxxxxxxxxxxxxxxx",
+      },
+    },
+    schemas: {
+      Image: {
+        type: "object",
+        properties: {
+          height: {
+            type: "integer",
+          },
+          width: {
+            type: "integer",
+          },
+          url: {
+            type: "string",
+          },
+          expires_at: {
+            type: "integer",
+          },
+        },
+      },
+      Video: {
+        type: "object",
+        nullable: true,
+        properties: {
+          thumbnail: {
+            type: "array",
+            items: {
+              $ref: "#/components/schemas/Image",
+            },
+          },
+          resolutions: {
+            type: "array",
+            items: {
+              $ref: "#/components/schemas/Image",
+            },
+          },
+          duration: {
+            type: "integer",
+          },
+          aspect_ratio: {
+            type: "number",
+          },
+        },
+      },
+      Asset: {
+        type: "object",
+        properties: {
+          link: {
+            type: "object",
+            nullable: true,
+          },
+          images: {
+            type: "array",
+            nullable: true,
+            items: {
+              $ref: "#/components/schemas/Image",
+            },
+          },
+          video: {
+            $ref: "#/components/schemas/Video",
+          },
+          document: {
+            type: "object",
+            nullable: true,
+          },
+          reshare: {
+            type: "object",
+            nullable: true,
+          },
+        },
+      },
+      MiniProfile: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            example: "ACoAADk_dkkBUgoY3JZwOoVwWnmNT5Vul2dScAw",
+          },
+          type: {
+            type: "string",
+            enum: ["person", "company"],
+            example: "person",
+          },
+          full_name: {
+            type: "string",
+            example: "Joris Delorme",
+          },
+          url: {
+            type: "string",
+            example: "https://www.linkedin.com/in/joris-delorme-b757a5229",
+          },
+          headline: {
+            type: "string",
+            example:
+              "Founder of Ghost Genius - Fâché avec la langue de Molière, alors j'écris du code.",
+          },
+          profile_picture: {
+            type: "array",
+            items: {
+              $ref: "#/components/schemas/Image",
+            },
+            example: [
+              {
+                height: 100,
+                width: 100,
+                url: "https://media.licdn.com/dms/image/v2/D4E03AQH0TT2Fp8YS2g/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1693474691125?e=1744848000&v=beta&t=y6T6e5erU2vCynuG3iPjuOkCtIiBgRpQiop7uyar-t4",
+                expires_at: 1737590400000,
+              },
+            ],
+          },
+        },
+      },
+      TextWithTags: {
+        type: "object",
+        properties: {
+          content: {
+            type: "string",
+            example:
+              "Excited to announce my new project with @Ghost Genius! 🚀",
+          },
+          tags: {
+            type: "array",
+            description: "User and Company @ in the text.",
+            items: {
+              type: "object",
+              properties: {
+                start: {
+                  type: "integer",
+                  description: "Where the tag (@) start.",
+                  example: 32,
+                },
+                length: {
+                  type: "integer",
+                  description:
+                    "The number of characters of the tag (@) so you know the end.",
+                  example: 12,
+                },
+                profile: {
+                  $ref: "#/components/schemas/MiniProfile",
+                },
+              },
+            },
+            example: [
+              {
+                start: 32,
+                length: 12,
+                profile: {
+                  id: "101122118",
+                  type: "company",
+                  full_name: "Ghost Genius",
+                  url: "https://www.linkedin.com/company/101122118/",
+                  headline: "Unlock the power of LinkedIn with Ghost Genius",
+                  profile_picture: [
+                    {
+                      height: 100,
+                      width: 100,
+                      url: "https://media.licdn.com/dms/image/v2/D4E0BAQHJB_kqcl-YOA/company-logo_100_100/company-logo_100_100/0/1727276683266/ghost_genius_logo?e=1747872000&v=beta&t=oSz7Pn7F5v29t3pEXOcxpMfAKVUkG-VSZwci7NkIsGY",
+                      expires_at: 1737590400000,
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+      CommentCore: {
+        type: "object",
+        properties: {
+          text: {
+            $ref: "#/components/schemas/TextWithTags",
+            example: {
+              content: "Amazing work! Keep pushing forward! 💪",
+              tags: [],
+            },
+          },
+          published_at: {
+            type: "string",
+            format: "date-time",
+            description: "ISO 8601 timestamp",
+            example: "2024-03-15T14:30:00.000Z",
+          },
+          profile: {
+            $ref: "#/components/schemas/MiniProfile",
+          },
+          reactions: {
+            type: "object",
+            properties: {
+              types: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    type: {
+                      type: "string",
+                      enum: [
+                        "LIKE",
+                        "PRAISE",
+                        "EMPATHY",
+                        "APPRECIATION",
+                        "INTEREST",
+                      ],
+                    },
+                    total: {
+                      type: "integer",
+                    },
+                  },
+                },
+                example: [
+                  {
+                    type: "LIKE",
+                    total: 5,
+                  },
+                  {
+                    type: "PRAISE",
+                    total: 2,
+                  },
+                ],
+              },
+              total: {
+                type: "integer",
+                example: 7,
+              },
+            },
+          },
+        },
+      },
+      Comment: {
+        type: "object",
+        properties: {
+          text: {
+            $ref: "#/components/schemas/TextWithTags",
+            example: {
+              content: "Amazing work! Keep pushing forward! 💪",
+              tags: [],
+            },
+          },
+          published_at: {
+            type: "string",
+            format: "date-time",
+            description: "ISO 8601 timestamp",
+            example: "2024-03-15T14:30:00.000Z",
+          },
+          profile: {
+            $ref: "#/components/schemas/MiniProfile",
+          },
+          reactions: {
+            type: "object",
+            properties: {
+              types: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    type: {
+                      type: "string",
+                      enum: [
+                        "LIKE",
+                        "PRAISE",
+                        "EMPATHY",
+                        "APPRECIATION",
+                        "INTEREST",
+                      ],
+                    },
+                    total: {
+                      type: "integer",
+                    },
+                  },
+                },
+                example: [
+                  {
+                    type: "LIKE",
+                    total: 5,
+                  },
+                  {
+                    type: "PRAISE",
+                    total: 2,
+                  },
+                ],
+              },
+              total: {
+                type: "integer",
+                example: 7,
+              },
+            },
+          },
+          comments: {
+            type: "array",
+            description: "Responses to this comment.",
+            items: {
+              $ref: "#/components/schemas/CommentCore",
+            },
+            example: [],
+          },
+        },
+      },
+      ProfileComment: {
+        type: "object",
+        properties: {
+          comment: {
+            type: "string",
+            description: "The comment text content",
+            example: "Ça déchire ! J'ai hâte de voir la suite 😉",
+          },
+          post: {
+            $ref: "#/components/schemas/Post",
+          },
+          reply_to: {
+            type: "object",
+            nullable: true,
+            properties: {
+              profile: {
+                $ref: "#/components/schemas/MiniProfile",
+                example: {
+                  id: "ACoAAAJXQIEBA0FD4IckM2LrQQQUyKaXcBEIz68",
+                  type: "person",
+                  full_name: "Eduardo Ordax",
+                  url: "https://www.linkedin.com/in/eordax",
+                  headline:
+                    "🤖 Generative AI Lead @ AWS ☁️ (150k+) | Startup Advisor | Public Speaker | AI Outsider",
+                  profile_picture: [],
+                },
+              },
+              comment: {
+                type: "string",
+                example: "In some cases it’s better to be direct",
+              },
+            },
+          },
+        },
+      },
+      ProfileReaction: {
+        type: "object",
+        properties: {
+          reaction_type: {
+            type: "string",
+            enum: [
+              "LIKE",
+              "INTEREST",
+              "EMPATHY",
+              "PRAISE",
+              "ENTERTAINMENT",
+              "APPRECIATION",
+            ],
+            description: "The type of reaction given to the post",
+            example: "LIKE",
+          },
+          post: {
+            $ref: "#/components/schemas/Post",
+          },
+          comment: {
+            type: "object",
+            nullable: true,
+            properties: {
+              text: {
+                type: "string",
+                example: "It's awesome! I can't wait to see the next part 😉",
+              },
+              profile: {
+                $ref: "#/components/schemas/MiniProfile",
+              },
+            },
+          },
+        },
+      },
+      Post: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            example: "7266754951920414721",
+          },
+          url: {
+            type: "string",
+            example:
+              "https://www.linkedin.com/feed/update/urn:li:activity:7266754951920414721",
+          },
+          total_reactions: {
+            type: "integer",
+            example: 247,
+          },
+          total_reshares: {
+            type: "integer",
+            example: 23,
+          },
+          total_comments: {
+            type: "integer",
+            example: 26,
+          },
+          reaction_types: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                type: {
+                  type: "string",
+                  enum: [
+                    "LIKE",
+                    "PRAISE",
+                    "EMPATHY",
+                    "APPRECIATION",
+                    "INTEREST",
+                    "ENTERTAINMENT",
+                  ],
+                },
+                total: {
+                  type: "integer",
+                },
+              },
+            },
+            example: [
+              {
+                type: "LIKE",
+                total: 199,
+              },
+              {
+                type: "APPRECIATION",
+                total: 29,
+              },
+              {
+                type: "PRAISE",
+                total: 13,
+              },
+              {
+                type: "EMPATHY",
+                total: 5,
+              },
+              {
+                type: "ENTERTAINMENT",
+                total: 1,
+              },
+            ],
+          },
+          text: {
+            $ref: "#/components/schemas/TextWithTags",
+            example: {
+              content:
+                "J'ai 20 ans, aucun casier judiciaire, des connaissances approfondies sur l'IA et le développement de logiciels.\n\nEt aujourd'hui, je cherche une mission freelance en tant que développeur.\n\nLa première phrase ne me suffira pas à séduire mon prochain employeur... Mais peut-être que la suite fera mouche :\n\nAlors voici ce que j'ai créé avec quelques dizaines de milliers de lignes de code :\n\n💜 @Popote une app qui aide des centaines de personnes à mieux manger chaque jour grâce à l'IA et la science.\n\n👻 @Ghost Genius un logiciel qui aide les étudiants à décrocher des opportunités professionnelles (stage, alternance...) et fait gagner de l'argent aux écoles.\n\n👊 @Oriane.ai un logiciel qui aide les créateurs de contenu à trouver leur prochain contenu grâce à l'IA.\n\n🍌 DYCALL un logiciel qui aide les commerciaux à kiffer le cold calling grâce à la gamification avec des milliers d'appels passés.\n\n💎 @Oxpium Agency une agence développe des SaaS avec classe.\n\n5 ou 6 projets en freelance avec des entreprises de toutes tailles 🤝.\n\n---\n\nAlors non, je n'ai pas de diplôme.\n\nMais je peux affirmer, après toutes ces années à:\n\néplucher des papiers de recherche sur l'IA\ncoder des fonctionnalités, plus difficiles les unes que les autres\ndévelopper des shaders complexes pour animer des landing pages\n\navoir un bac +5 en (galères et) réalisation de projets les plus complexes les uns que les autres.\n\nBref, j'ai 20 ans et je cherche un job :)\n\nPS : like & repartage pour m'aider dans mes recherches 🫶",
+              tags: [
+                {
+                  start: 391,
+                  length: 6,
+                  profile: {
+                    id: "104953726",
+                    type: "company",
+                    full_name: "Popote",
+                    url: "https://www.linkedin.com/company/app-popote/",
+                    headline: "",
+                    profile_picture: [],
+                  },
+                },
+                {
+                  start: 500,
+                  length: 12,
+                  profile: {
+                    id: "101122118",
+                    type: "company",
+                    full_name: "Ghost Genius",
+                    url: "https://www.linkedin.com/company/ghost-genius/",
+                    headline: "",
+                    profile_picture: [],
+                  },
+                },
+                {
+                  start: 659,
+                  length: 9,
+                  profile: {
+                    id: "104877771",
+                    type: "company",
+                    full_name: "Oriane.ai",
+                    url: "https://www.linkedin.com/company/orianeai/",
+                    headline: "",
+                    profile_picture: [],
+                  },
+                },
+                {
+                  start: 895,
+                  length: 13,
+                  profile: {
+                    id: "92746691",
+                    type: "company",
+                    full_name: "Oxpium Agency",
+                    url: "https://www.linkedin.com/company/oxpium-agency/",
+                    headline: "",
+                    profile_picture: [],
+                  },
+                },
+              ],
+            },
+          },
+          published_at: {
+            type: "string",
+            description: "UTC timestamp in human readable format",
+            example: "2024-11-25T10:09:50.000Z",
+          },
+          asset: {
+            $ref: "#/components/schemas/Asset",
+            example: {
+              link: null,
+              images: [
+                {
+                  resolutions: [
+                    {
+                      height: 1536,
+                      width: 1152,
+                      url: "https://media.licdn.com/dms/image/v2/D4E22AQFXtz31_t9Vlg/feedshare-shrink_2048_1536/feedshare-shrink_2048_1536/0/1732529389589?e=1742428800&v=beta&t=0OpkBHC1y0gswc-2u4pySvA2vhJkwGGh-9Hzr2bWtXs",
+                      expires_at: 1737590400000,
+                    },
+                    {
+                      height: 27,
+                      width: 20,
+                      url: "https://media.licdn.com/dms/image/v2/D4E22AQFXtz31_t9Vlg/feedshare-shrink_20/feedshare-shrink_20/0/1732529389557?e=1742428800&v=beta&t=vIgcWKZaKOG-XED5F0DMZ6UstK15FOfSQ_I3yau7V0M",
+                      expires_at: 1737590400000,
+                    },
+                  ],
+                  accessibilityText: "",
+                },
+              ],
+              video: null,
+              document: null,
+              reshare: null,
+            },
+          },
+          profile: {
+            $ref: "#/components/schemas/MiniProfile",
+            example: {
+              id: "ACoAADk_dkkBUgoY3JZwOoVwWnmNT5Vul2dScAw",
+              type: "person",
+              full_name: "Joris Delorme",
+              url: "https://www.linkedin.com/in/joris-delorme-b757a5229",
+              headline:
+                "Founder of Ghost Genius - Fâché avec la langue de Molière, alors j'écris du code.",
+              profile_picture: [
+                {
+                  height: 100,
+                  width: 100,
+                  url: "https://media.licdn.com/dms/image/v2/D4E03AQH0TT2Fp8YS2g/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1693474691125?e=1744848000&v=beta&t=y6T6e5erU2vCynuG3iPjuOkCtIiBgRpQiop7uyar-t4",
+                  expires_at: 1737590400000,
+                },
+              ],
+            },
+          },
+          is_reshare: {
+            type: "boolean",
+            example: false,
+          },
+        },
+      },
+      Profile: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            example: "ACoAADk_dkkBUgoY3JZwOoVwWnmNT5Vul2dScAw",
+          },
+          public_id: {
+            type: "string",
+            example: "joris-delorme-b757a5229",
+          },
+          url: {
+            type: "string",
+            example: "https://www.linkedin.com/in/joris-delorme-b757a5229",
+          },
+          first_name: {
+            type: "string",
+            example: "Joris",
+          },
+          last_name: {
+            type: "string",
+            example: "Delorme",
+          },
+          full_name: {
+            type: "string",
+            example: "Joris Delorme",
+          },
+          profile_picture: {
+            type: "array",
+            items: {
+              $ref: "#/components/schemas/Image",
+            },
+            example: [
+              {
+                height: 100,
+                width: 100,
+                url: "https://media.licdn.com/dms/image/v2/D4E03AQH0TT2Fp8YS2g/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1693474691125?e=1744848000&v=beta&t=y6T6e5erU2vCynuG3iPjuOkCtIiBgRpQiop7uyar-t4",
+                expires_at: 1737590400000,
+              },
+              {
+                height: 200,
+                width: 200,
+                url: "https://media.licdn.com/dms/image/v2/D4E03AQH0TT2Fp8YS2g/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1693474691125?e=1744848000&v=beta&t=l3mJxOVnYMN1FJUTzXwFGJh_IgD5KeX32FJAnYKL4z8",
+                expires_at: 1737590400000,
+              },
+              {
+                height: 400,
+                width: 400,
+                url: "https://media.licdn.com/dms/image/v2/D4E03AQH0TT2Fp8YS2g/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1693474691125?e=1744848000&v=beta&t=uNqS5EfTc5wbqk5bovBEOe79QRILpFDnEHWv4WmL2aU",
+                expires_at: 1737590400000,
+              },
+              {
+                height: 800,
+                width: 800,
+                url: "https://media.licdn.com/dms/image/v2/D4E03AQH0TT2Fp8YS2g/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1693474691125?e=1744848000&v=beta&t=E9mGRNWCMxw6E15EUVfjgWotuY9ShTg6cGsXk75h-lQ",
+                expires_at: 1737590400000,
+              },
+            ],
+          },
+          background_picture: {
+            type: "array",
+            items: {
+              $ref: "#/components/schemas/Image",
+            },
+            example: [
+              {
+                height: 200,
+                width: 800,
+                url: "https://media.licdn.com/dms/image/v2/D4E16AQFeIqprHAsYmA/profile-displaybackgroundimage-shrink_200_800/profile-displaybackgroundimage-shrink_200_800/0/1725952742657?e=1744848000&v=beta&t=Z4eSUhWmY0OztzoQ6i_TLHzHPefJsXsYlKYV5T1vOOQ",
+                expires_at: 1737590400000,
+              },
+              {
+                height: 350,
+                width: 1400,
+                url: "https://media.licdn.com/dms/image/v2/D4E16AQFeIqprHAsYmA/profile-displaybackgroundimage-shrink_350_1400/profile-displaybackgroundimage-shrink_350_1400/0/1725952742657?e=1744848000&v=beta&t=mM3WGwvj59KjTjZPhZ62RitJH8ZqtzmsxhTllj-nHLU",
+                expires_at: 1737590400000,
+              },
+            ],
+          },
+          headline: {
+            type: "string",
+            example:
+              "Founder of Ghost Genius - Fâché avec la langue de Molière, alors j'écris du code.",
+          },
+          is_premium: {
+            type: "boolean",
+            example: false,
+          },
+          is_creator: {
+            type: "boolean",
+            example: true,
+          },
+          link: {
+            type: "object",
+            nullable: true,
+            properties: {
+              text: {
+                type: "string",
+              },
+              href: {
+                type: "string",
+              },
+            },
+            example: {
+              text: "Dis-moi tout, je t'écoute  ",
+              href: "https://taap.it/r9yqcB",
+            },
+          },
+          geo: {
+            type: "object",
+            properties: {
+              location: {
+                type: "object",
+                properties: {
+                  name: {
+                    type: "string",
+                    example: "Greater Lyon Area",
+                  },
+                  urn: {
+                    type: "string",
+                    example: "90009674",
+                  },
+                },
+              },
+              country: {
+                type: "object",
+                properties: {
+                  name: {
+                    type: "string",
+                    example: "France",
+                  },
+                  urn: {
+                    type: "string",
+                    example: "105015875",
+                  },
+                },
+              },
+            },
+          },
+          connections: {
+            type: "integer",
+            example: 1133,
+          },
+          followers: {
+            type: "integer",
+            example: 1295,
+          },
+          educations: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                school: {
+                  nullable: true,
+                  $ref: "#/components/schemas/MiniProfile",
+                },
+                grade: {
+                  type: "string",
+                  nullable: true,
+                },
+                description: {
+                  type: "string",
+                  nullable: true,
+                },
+                skills: {
+                  type: "array",
+                  items: {
+                    type: "string",
+                  },
+                },
+                major: {
+                  type: "string",
+                },
+                degree: {
+                  type: "string",
+                },
+                start: {
+                  type: "string",
+                  nullable: true,
+                },
+                end: {
+                  type: "string",
+                  nullable: true,
+                },
+              },
+            },
+            example: [
+              {
+                school: {
+                  id: "108544",
+                  type: "company",
+                  full_name: "Université Paris-Est Créteil (UPEC)",
+                  url: "https://www.linkedin.com/company/108544/",
+                  headline: null,
+                  profile_picture: [
+                    {
+                      height: 200,
+                      width: 200,
+                      url: "https://media.licdn.com/dms/image/v2/C4E0BAQEErdpTzCZMDA/company-logo_200_200/company-logo_200_200/0/1630598387059/universite_paris_est_creteil_paris12_logo?e=1749081600&v=beta&t=nQnHD7Fw-ScjVYtgByzO4y51lwGwLn9RIK_UDGTqnBg",
+                      expires_at: 1737590400000,
+                    },
+                  ],
+                },
+                grade: null,
+                description:
+                  "Doctorant en sciences de gestion au LIPHA : Numérique et universités. Politiques publiques et stratégies post-Covid ",
+                skills: [
+                  "Analyse de données",
+                  "Compétences analytiques",
+                  "Communication stratégique",
+                  "Politique publique",
+                  "Analyse des politiques",
+                ],
+                major: "Sciences de gestion",
+                degree: "Doctorat",
+                start: "2020-06",
+                end: "2024-08",
+              },
+            ],
+          },
+          is_hiring: {
+            type: "boolean",
+            example: false,
+          },
+          is_open_to_work: {
+            type: "boolean",
+            example: false,
+          },
+          summary: {
+            type: "string",
+            example:
+              "J'explore une ruelle, sombre, peut-être sans issue mais certain d'être à sens unique, jonchée d'arbres effondrés au sol, de nids de poule sans fin. Je m'y suis aventuré par mégarde il y a bien longtemps sans m'en rendre compte, ça devait être pendant l'un de ces cours de math où je me perdais dans mes pensées.\n\nParfois cette ruelle me fais peur, des larme peuvent couler. Oui parfois je trébuche, souvent même. Mais la colère, l'orgueil, l'envie, le besoin, la revanche ou l'ego, me font et me feront toujours mettre un pied devant l'autre, pour, peut-être, un jour, arriver au bout de cette ruelle sombre.\n\nEn attendant, j'allume le flash de l'iPhone et j'avance, parfois en courant, parfois a tâtons.\n\n246 rue de l'Entrepreneuriat.",
+          },
+          languages: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: {
+                  type: "string",
+                },
+                level: {
+                  type: "string",
+                  enum: ["FULL_PROFESSIONAL", "NATIVE_OR_BILINGUAL"],
+                },
+              },
+            },
+            example: [],
+          },
+          experiences: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                company: {
+                  nullable: true,
+                  $ref: "#/components/schemas/MiniProfile",
+                },
+                start: {
+                  type: "string",
+                  format: "date-time",
+                },
+                end: {
+                  type: "string",
+                  format: "date-time",
+                  enum: ["Present"],
+                },
+                position: {
+                  type: "string",
+                },
+                employmentType: {
+                  type: "string",
+                  nullable: true,
+                  enum: [
+                    "Permanent",
+                    "Apprenticeship",
+                    "Self-employed",
+                    "Freelance",
+                  ],
+                },
+                location: {
+                  type: "string",
+                  nullable: true,
+                },
+                skills: {
+                  type: "array",
+                  items: {
+                    type: "string",
+                  },
+                },
+              },
+            },
+            example: [
+              {
+                company: {
+                  id: "101122118",
+                  name: "Ghost Genius",
+                  url: "https://www.linkedin.com/company/101122118/",
+                  logo: [
+                    {
+                      height: 200,
+                      width: 200,
+                      url: "https://media.licdn.com/dms/image/v2/D4E0BAQHJB_kqcl-YOA/company-logo_200_200/company-logo_200_200/0/1727276683266/ghost_genius_logo?e=1747872000&v=beta&t=xJ5IGV7O1Arpue0mE-cVSwkzaGFRBlLRmzdGqfpo6EI",
+                      expires_at: 1737590400000,
+                    },
+                  ],
+                },
+                start: "2023-12-31T23:00:00.000Z",
+                end: "Present",
+                position: "Co-fondateur",
+                employmentType: "Self-employed",
+                skills: [
+                  "Développement full-stack",
+                  "Leadership",
+                  "Design d'expérience utilisateur (UX)",
+                  "Développeur front-end",
+                  "Intelligence artificielle (IA)",
+                ],
+                location: "Lyon, Auvergne-Rhône-Alpes, France",
+              },
+            ],
+          },
+          skills: {
+            type: "array",
+            items: {
+              type: "string",
+            },
+            example: [
+              "SwiftUI",
+              "Expérience utilisateur (UX)",
+              "Leadership",
+              "Intelligence artificielle (IA)",
+              "Next.js",
+              "Développement full-stack",
+              "Design d'expérience utilisateur (UX)",
+              "Développement front-end",
+              "Développeur front-end",
+              "Figma (logiciel)",
+              "React.js",
+              "JavaScript",
+              "Node.js",
+              "Développement web",
+              "Création de sites web",
+            ],
+          },
+        },
+      },
+      Company: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            example: "309694",
+          },
+          name: {
+            type: "string",
+            example: "Airbnb",
+          },
+          public_id: {
+            type: "string",
+            example: "airbnb",
+          },
+          tagline: {
+            type: "string",
+            example: "Airbnb is a community based on connection and belonging.",
+          },
+          description: {
+            type: "string",
+            example:
+              "Airbnb was born in 2007 when two Hosts welcomed three guests to their San Francisco home, and has since grown to over 5 million Hosts who have welcomed over 1.5 billion guest arrivals in almost every country across the globe. Every day, Hosts offer unique stays and experiences that make it possible for guests to connect with communities in a more authentic way.",
+          },
+          url: {
+            type: "string",
+            example: "https://www.linkedin.com/company/airbnb",
+          },
+          type: {
+            type: "string",
+            enum: ["PUBLIC_COMPANY"],
+            example: "PUBLIC_COMPANY",
+          },
+          logo: {
+            type: "array",
+            items: {
+              $ref: "#/components/schemas/Image",
+            },
+          },
+          background_cover: {
+            type: "array",
+            items: {
+              $ref: "#/components/schemas/Image",
+            },
+          },
+          staff_count: {
+            type: "integer",
+            example: 47468,
+          },
+          staff_count_range: {
+            type: "object",
+            properties: {
+              from: {
+                type: "integer",
+                example: 5001,
+              },
+              to: {
+                type: "integer",
+                example: 10000,
+              },
+            },
+          },
+          website: {
+            type: "string",
+            example: "http://airbnb.com",
+          },
+          industries: {
+            type: "array",
+            items: {
+              type: "string",
+            },
+            example: ["Software Development"],
+          },
+          specialities: {
+            type: "array",
+            items: {
+              type: "string",
+            },
+            example: [
+              "travel accommodations",
+              "collaborative economy",
+              "hospitality",
+            ],
+          },
+          locations: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                geographic_area: {
+                  type: "string",
+                  example: "CA",
+                },
+                country: {
+                  type: "string",
+                  example: "US",
+                },
+                city: {
+                  type: "string",
+                  example: "San Francisco",
+                },
+                postal_code: {
+                  type: "string",
+                  example: "94103",
+                },
+                headquarter: {
+                  type: "boolean",
+                  example: true,
+                },
+                first_line: {
+                  type: "string",
+                  example: "888 Brannan Street",
+                },
+              },
+            },
+            example: [
+              {
+                geographic_area: "CA",
+                country: "US",
+                city: "San Francisco",
+                postal_code: "94103",
+                headquarter: true,
+                first_line: "888 Brannan Street",
+              },
+            ],
+          },
+          followers_count: {
+            type: "integer",
+            example: 2835103,
+          },
+          headquarter: {
+            type: "object",
+            properties: {
+              geographic_area: {
+                type: "string",
+                example: "CA",
+              },
+              country: {
+                type: "string",
+                example: "US",
+              },
+              city: {
+                type: "string",
+                example: "San Francisco",
+              },
+              postal_code: {
+                type: "string",
+                example: "94103",
+              },
+            },
+          },
+          founded_on: {
+            type: "integer",
+            example: 2007,
+          },
+          claimable: {
+            type: "boolean",
+            example: false,
+          },
+          crunchbase_url: {
+            type: "string",
+            example:
+              "https://www.crunchbase.com/organization/airbnb?utm_source=linkedin&utm_medium=referral&utm_campaign=linkedin_companies&utm_content=profile_cta",
+          },
+          funding: {
+            type: "object",
+            properties: {
+              last_round: {
+                type: "object",
+                properties: {
+                  lead_investors: {
+                    type: "array",
+                    items: {
+                      type: "string",
+                    },
+                    example: [],
+                  },
+                  investors_crunchbase_url: {
+                    type: "string",
+                    example:
+                      "https://www.crunchbase.com/funding_round/airbnb-debt-financing--efb32168?utm_source=linkedin&utm_medium=referral&utm_campaign=linkedin_companies&utm_content=all_investors",
+                  },
+                  round_crunchbase_url: {
+                    type: "string",
+                    example:
+                      "https://www.crunchbase.com/funding_round/airbnb-debt-financing--efb32168?utm_source=linkedin&utm_medium=referral&utm_campaign=linkedin_companies&utm_content=last_funding",
+                  },
+                  type: {
+                    type: "string",
+                    enum: ["DEBT_FINANCING"],
+                    example: "DEBT_FINANCING",
+                  },
+                  num_other_investors: {
+                    type: "integer",
+                    example: 7,
+                  },
+                  announced_on: {
+                    type: "object",
+                    properties: {
+                      month: {
+                        type: "integer",
+                        example: 4,
+                      },
+                      day: {
+                        type: "integer",
+                        example: 14,
+                      },
+                      year: {
+                        type: "integer",
+                        example: 2020,
+                      },
+                    },
+                  },
+                  raised: {
+                    type: "object",
+                    properties: {
+                      currency: {
+                        type: "string",
+                        example: "USD",
+                      },
+                      amount: {
+                        type: "string",
+                        example: "1000000000",
+                      },
+                    },
+                  },
+                },
+              },
+              rounds: {
+                type: "integer",
+                example: 29,
+              },
+              updated_at: {
+                type: "integer",
+                example: 1730992287,
+              },
+            },
+          },
+        },
+      },
+      Job: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            example: "4153112402",
+          },
+          title: {
+            type: "string",
+            example: "Développeur / Développeuse Backend NodeJS",
+          },
+          description: {
+            type: "string",
+            example:
+              "Description De L'entreprise\n\nNous sommes des Xplorers.\n\nNous sommes la première plateforme mondiale SaaS de paiement et d'accélération du commerce pour aider les entreprises à réussir...",
+          },
+          state: {
+            type: "string",
+            example: "LISTED",
+          },
+          location: {
+            type: "string",
+            example: "Toulouse, Occitanie, France",
+          },
+          url: {
+            type: "string",
+            example: "https://www.linkedin.com/jobs/view/4153112402",
+          },
+          work_remote_allowed: {
+            type: "boolean",
+            example: true,
+          },
+          work_place: {
+            type: "string",
+            example: "Remote",
+          },
+          listed_at_date: {
+            type: "string",
+            format: "date-time",
+            example: "2025-02-14T13:52:53.000Z",
+          },
+          original_listed_date: {
+            type: "string",
+            format: "date-time",
+            example: "2025-02-14T13:52:53.000Z",
+          },
+          closed: {
+            type: "boolean",
+            example: false,
+          },
+          company: {
+            $ref: "#/components/schemas/MiniProfile",
+            example: {
+              id: "71555983",
+              type: "company",
+              full_name: "Xplor Technologies",
+              url: "https://www.linkedin.com/company/xplor-technologies",
+              headline: "",
+              profile_picture: [
+                {
+                  height: 200,
+                  width: 200,
+                  url: "https://media.licdn.com/dms/image/v2/D4E0BAQFBHkJv9Rf9Jw/company-logo_200_200/company-logo_200_200/0/1719839367932/xplor_technologies_logo?e=1747872000&v=beta&t=PZFk11_JR1LkftPb5zSohzTHNJh1s89-Y1v-UhIHNBQ",
+                  expires_at: 1737590400000,
+                },
+              ],
+            },
+          },
+          apply_method: {
+            type: "object",
+            properties: {
+              company_apply_url: {
+                type: "string",
+                nullable: true,
+                example:
+                  "https://jobs.smartrecruiters.com/Xplor/744000042589095-developpeur-developpeuse-backend-nodejs",
+              },
+              easy_apply_url: {
+                type: "string",
+                nullable: true,
+                example: null,
+              },
+            },
+          },
+        },
+      },
+      Account: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+            description: "Unique account identifier",
+          },
+          name: {
+            type: "string",
+            nullable: true,
+            description: "Account name",
+          },
+          li_at: {
+            type: "string",
+            description: "LinkedIn authentication token",
+          },
+          csrf: {
+            type: "string",
+            description: "CSRF token",
+          },
+          user_agent: {
+            type: "string",
+            description: "User agent for the account",
+          },
+          organization_id: {
+            type: "string",
+            format: "uuid",
+            description: "Organization this account belongs to",
+          },
+          created_at: {
+            type: "string",
+            format: "date-time",
+            description: "When this account was created",
+          },
+          last_used: {
+            type: "string",
+            format: "date-time",
+            nullable: true,
+            description: "When this account was last used",
+          },
+        },
+      },
+    },
+  },
+  security: [
+    {
+      bearerAuth: [],
+    },
+  ],
+  tags: [
+    {
+      name: "Post",
+      description: "Get all informations related to a post.",
+    },
+    {
+      name: "Profile",
+      description: "Get all informations related to a profile.",
+    },
+    {
+      name: "Company",
+      description: "Get all informations related to a company.",
+    },
+    {
+      name: "Accounts",
+      description: "Manage LinkedIn accounts for your organization.",
+    },
+    {
+      name: "Private",
+      description:
+        "Access private LinkedIn data from your own profile, such as profile views and connections.",
+    },
+    {
+      name: "Search",
+      description:
+        "Search for various entities on LinkedIn including profiles, companies, posts, and jobs.",
+    },
+    {
+      name: "Tools",
+      description:
+        "Helper endpoints to discover LinkedIn IDs for use in other API queries.",
+    },
+    {
+      name: "Job",
+      description: "Get all informations related to a job.",
+    },
+    {
+      name: "Contact",
+      description:
+        "Get contact information including phone numbers and email addresses.",
+    },
+  ],
+};
+
+// Add security configuration to all operations
+Object.keys(pathsDefinition).forEach((pathKey) => {
+    
+  const pathItem = pathsDefinition[pathKey] as unknown as Record<string, any>;
+
+  // List of HTTP methods that can have operations
+  const httpMethods = [
+    "get",
+    "post",
+    "put",
+    "patch",
+    "delete",
+    "head",
+    "options",
+    "trace",
+  ] as const;
+
+  httpMethods.forEach((method) => {
+    if (pathItem[method]) {
+      pathItem[method].security = [{ bearerAuth: [] }];
+    }
+  });
+});
+
+doc.paths = pathsDefinition;
+
+
+const config = {
+    spec: {
+        content: doc
+    },
+    defaultHttpClient: {
+        "clientKey": "fetch",
+        "targetKey": "node"
+    },
+    hiddenClients: ["undici"],
+    proxyUrl: "https://proxy.scalar.com",
+    favicon: `https://www.ghostgenius.fr/favicon.svg`,
+    metaData: {
+        ogTitle: "Documentation - Ghost Genius API",
+        title: "Documentation - Ghost Genius API",
+        description: "Complete reference documentation for the Ghost Genius LinkedIn API, including examples and code snippets for our endpoints in Python, cURL, and Node.js.",
+    }
+}
+
+// save the config to a file
+fs.writeFileSync("api-reference/openapi.json", JSON.stringify(config, null, 4));
